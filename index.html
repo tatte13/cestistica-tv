@@ -4,18 +4,18 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cestistica TV - Club Channel Biancoverde</title>
+    <meta name="description" content="Il club channel ufficiale della Cestistica Savonese">
+    <meta name="theme-color" content="#228B22">
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <style>
         * { font-family: 'Poppins', sans-serif; }
-        :root {
-            --forest-green: #228B22;
-            --light-forest: #3CB371;
-            --dark-green: #1a6b1a;
-        }
+        :root { --forest-green: #228B22; --light-forest: #3CB371; --dark-green: #1a6b1a; }
         .gradient-bg { background: linear-gradient(135deg, #228B22 0%, #1a6b1a 100%); }
         .card-hover:hover { transform: scale(1.02); transition: all 0.3s ease; }
         .video-card { transition: all 0.3s ease; }
@@ -24,36 +24,25 @@
         .custom-scrollbar::-webkit-scrollbar-track { background: #1a1a1a; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #228B22; border-radius: 4px; }
         .hero-gradient { background: linear-gradient(to top, #111 0%, transparent 60%); }
-        .category-scroll { scroll-behavior: smooth; }
         input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 2px #3CB371; }
         .animate-pulse-slow { animation: pulse 3s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
-        
         .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease; }
         .mobile-menu.open { transform: translateX(0); }
-        
-        .loading-overlay { 
-            position: fixed; inset: 0; background: #111; 
-            display: flex; align-items: center; justify-content: center; 
-            z-index: 9999; flex-direction: column; gap: 1rem;
-        }
-        .loading-spinner {
-            width: 50px; height: 50px; border: 4px solid #333;
-            border-top-color: #228B22; border-radius: 50%;
-            animation: spin 1s linear infinite;
-        }
+        .loading-overlay { position: fixed; inset: 0; background: #111; display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 1rem; }
+        .loading-spinner { width: 50px; height: 50px; border: 4px solid #333; border-top-color: #228B22; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        
-        .sync-indicator {
-            position: fixed; bottom: 20px; left: 20px;
-            padding: 8px 16px; border-radius: 20px; font-size: 12px;
-            z-index: 50; display: flex; align-items: center; gap: 8px;
-        }
+        .sync-indicator { position: fixed; bottom: 20px; left: 20px; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 50; display: flex; align-items: center; gap: 8px; }
         .sync-indicator.online { background: #22c55e; color: white; }
         .sync-indicator.offline { background: #ef4444; color: white; }
-        
         #heroBackground { transition: opacity 0.5s ease, background-image 0.5s ease; }
-        
+        .chat-container { height: 300px; overflow-y: auto; }
+        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
+        .tab-btn { transition: all 0.3s; }
+        .tab-btn.active { background: #228B22; color: white; }
+        .news-card img { transition: transform 0.3s; }
+        .news-card:hover img { transform: scale(1.05); }
+        .pwa-install { position: fixed; bottom: 80px; right: 20px; z-index: 100; }
         @media (max-width: 768px) {
             .video-card { min-width: 160px !important; }
             .video-card img { height: 100px !important; }
@@ -67,27 +56,30 @@
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     
-    <!-- Loading Overlay -->
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
         <p class="text-green-400 font-medium">Caricamento Cestistica TV...</p>
     </div>
 
-    <!-- Login/Register Modal -->
-    <div id="authModal" class="fixed inset-0 bg-black/90 flex items-center justify-center overflow-y-auto py-8 hidden" style="z-index: 10001;">
-        <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-md w-full mx-4 border border-green-600/30">
+    <!-- PWA Install Button -->
+    <button id="pwaInstall" class="pwa-install hidden gradient-bg px-4 py-3 rounded-full shadow-lg flex items-center gap-2 hover:scale-105 transition">
+        📲 Installa App
+    </button>
+
+    <!-- Auth Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden" style="z-index: 10001;">
+        <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-md w-full mx-4 border border-green-600/30 max-h-[90vh] overflow-y-auto">
             <div class="text-center mb-6">
                 <img id="authLogo" src="" alt="Cestistica TV" class="h-16 mx-auto mb-4 hidden">
                 <div id="authLogoPlaceholder" class="text-5xl mb-2">🏀</div>
                 <h1 class="text-2xl md:text-3xl font-bold text-white">Cestistica TV</h1>
                 <p class="text-green-400 font-medium mt-1">cestistica tv+</p>
-                <p class="text-gray-400 text-sm mt-2">Il Club Channel Biancoverde</p>
             </div>
             
             <div id="loginForm">
                 <h2 class="text-xl font-semibold mb-4 text-center">Accedi</h2>
-                <input type="text" id="loginUsername" placeholder="Username" class="w-full p-3 rounded-lg bg-gray-700 mb-3 border border-gray-600 focus:border-green-500">
-                <input type="password" id="loginPassword" placeholder="Password" class="w-full p-3 rounded-lg bg-gray-700 mb-4 border border-gray-600 focus:border-green-500">
+                <input type="text" id="loginUsername" placeholder="Username" class="w-full p-3 rounded-lg bg-gray-700 mb-3 border border-gray-600">
+                <input type="password" id="loginPassword" placeholder="Password" class="w-full p-3 rounded-lg bg-gray-700 mb-4 border border-gray-600">
                 <button onclick="login()" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">Accedi</button>
                 <p class="text-center mt-4 text-gray-400 text-sm">Non hai un account? <span onclick="showRegister()" class="text-green-400 cursor-pointer hover:underline">Registrati gratis</span></p>
             </div>
@@ -109,149 +101,174 @@
         </div>
     </div>
 
-    <!-- Mobile Menu Overlay -->
-    <div id="mobileMenuOverlay" class="fixed inset-0 bg-black/70 z-40 hidden" onclick="closeMobileMenu()"></div>
-    
     <!-- Mobile Menu -->
-    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-72 bg-gray-800 z-50 p-6">
+    <div id="mobileMenuOverlay" class="fixed inset-0 bg-black/70 z-40 hidden" onclick="closeMobileMenu()"></div>
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-72 bg-gray-800 z-50 p-6 overflow-y-auto">
         <div class="flex items-center justify-between mb-8">
-            <div class="flex items-center gap-2">
-                <img id="mobileLogo" src="" alt="Logo" class="h-10 hidden">
-                <span class="text-xl font-bold text-green-400">Menu</span>
-            </div>
-            <button onclick="closeMobileMenu()" class="text-gray-400 hover:text-white">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-            </button>
+            <span class="text-xl font-bold text-green-400">Menu</span>
+            <button onclick="closeMobileMenu()" class="text-gray-400 hover:text-white text-2xl">✕</button>
         </div>
-        <nav class="space-y-4">
-            <button onclick="showHome(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                Home
-            </button>
-            <button onclick="filterCategory('live'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
-                Live
-            </button>
-            <button onclick="filterCategory('replays'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                🎬 Full Match
-            </button>
-            <button onclick="filterCategory('highlights'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                ⚡ Highlights
-            </button>
-            <button onclick="filterCategory('altro'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                📺 Altro
-            </button>
-            <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                ❤️ La Mia Lista
-            </button>
+        <nav class="space-y-2">
+            <button onclick="showHome(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🏠 Home</button>
+            <button onclick="showNews(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📰 News</button>
+            <button onclick="showCalendar(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📅 Calendario</button>
+            <button onclick="showPronostici(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎯 Pronostici</button>
+            <button onclick="showClassifica(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🏆 Classifica Tifosi</button>
+            <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">❤️ La Mia Lista</button>
             <hr class="border-gray-700 my-4">
-            <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
-                👤 Dettagli Utente
-            </button>
-            <button onclick="showAdmin(); closeMobileMenu();" id="mobileAdminBtn" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 hidden">
-                ⚙️ Admin Panel
-            </button>
-            <button onclick="logout()" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 text-red-400">
-                🚪 Esci
-            </button>
+            <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👤 Profilo</button>
+            <button onclick="showBiancoverdiCard(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎫 Biancoverdi Card</button>
+            <button onclick="showAdmin(); closeMobileMenu();" id="mobileAdminBtn" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 hidden">⚙️ Admin</button>
+            <button onclick="logout()" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 text-red-400">🚪 Esci</button>
         </nav>
     </div>
 
-    <!-- User Details Modal -->
-    <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 my-8">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold">👤 Dettagli Utente</h3>
-                <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white">
+    <!-- Share Modal -->
+    <div id="shareModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl max-w-sm w-full border border-green-600/30">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-xl font-bold flex items-center gap-2">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                    Condividi
+                </h3>
+                <button onclick="closeShareModal()" class="text-gray-400 hover:text-white">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 </button>
             </div>
-            <div class="space-y-4">
-                <!-- Profile Photo Section -->
-                <div class="flex flex-col items-center mb-6">
-                    <div class="relative group">
-                        <div id="userAvatar" class="w-24 h-24 bg-green-600 rounded-full flex items-center justify-center text-3xl font-bold overflow-hidden">
-                            <img id="userAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
-                            <span id="userAvatarInitial"></span>
-                        </div>
-                        <label class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
-                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                            <input type="file" id="profilePhotoInput" accept="image/*" onchange="uploadProfilePhoto(event)" class="hidden">
-                        </label>
-                    </div>
-                    <p id="userFullName" class="font-semibold text-lg mt-3"></p>
-                    <p class="text-green-400 text-sm">cestistica tv+ Member</p>
-                    <div class="flex gap-2 mt-3">
-                        <button onclick="document.getElementById('profilePhotoInput').click()" class="text-xs bg-green-600 px-3 py-1.5 rounded-lg hover:bg-green-700 transition">📷 Cambia Foto</button>
-                        <button onclick="removeProfilePhoto()" id="removePhotoBtn" class="text-xs bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 transition hidden">🗑️ Rimuovi</button>
-                    </div>
-                </div>
-                <div class="bg-gray-700 rounded-lg p-4 space-y-3">
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Username:</span>
-                        <span id="userUsername" class="font-medium"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Email:</span>
-                        <span id="userEmail" class="font-medium"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Membro dal:</span>
-                        <span id="userDate" class="font-medium"></span>
-                    </div>
-                    <div class="flex justify-between">
-                        <span class="text-gray-400">Tipo Account:</span>
-                        <span id="userType" class="font-medium"></span>
-                    </div>
-                </div>
+            <div class="grid grid-cols-4 gap-3">
+                <button onclick="shareWhatsApp()" class="flex flex-col items-center gap-2 p-4 bg-green-600 rounded-xl hover:bg-green-700 transition">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+                    <span class="text-xs">WhatsApp</span>
+                </button>
+                <button onclick="shareFacebook()" class="flex flex-col items-center gap-2 p-4 bg-blue-600 rounded-xl hover:bg-blue-700 transition">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
+                    <span class="text-xs">Facebook</span>
+                </button>
+                <button onclick="shareTwitter()" class="flex flex-col items-center gap-2 p-4 bg-gray-900 rounded-xl hover:bg-gray-950 transition">
+                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+                    <span class="text-xs">X</span>
+                </button>
+                <button onclick="copyLink()" class="flex flex-col items-center gap-2 p-4 bg-gray-600 rounded-xl hover:bg-gray-700 transition">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
+                    <span class="text-xs">Copia</span>
+                </button>
             </div>
+        </div>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">👤 Il Mio Profilo</h3>
+                <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="flex flex-col items-center mb-6">
+                <div class="relative group">
+                    <div id="userAvatar" class="w-24 h-24 bg-green-600 rounded-full flex items-center justify-center text-3xl font-bold overflow-hidden">
+                        <img id="userAvatarImg" src="" class="w-full h-full object-cover hidden">
+                        <span id="userAvatarInitial"></span>
+                    </div>
+                    <label class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                        📷<input type="file" id="profilePhotoInput" accept="image/*" onchange="uploadProfilePhoto(event)" class="hidden">
+                    </label>
+                </div>
+                <button onclick="document.getElementById('profilePhotoInput').click()" class="mt-3 text-sm text-green-400 hover:underline">📷 Cambia Foto</button>
+                <button onclick="removeProfilePhoto()" id="removePhotoBtn" class="mt-1 text-sm text-red-400 hover:underline hidden">🗑️ Rimuovi</button>
+                <p id="userFullName" class="font-semibold text-lg mt-3"></p>
+                <div id="userBadge" class="mt-2"></div>
+                <p class="text-green-400 text-sm mt-1">cestistica tv+ Member</p>
+            </div>
+            <div class="bg-gray-700 rounded-lg p-4 space-y-3">
+                <div class="flex justify-between"><span class="text-gray-400">Username:</span><span id="userUsername" class="font-medium"></span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Email:</span><span id="userEmail" class="font-medium"></span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Biancoverdi Points:</span><span id="userPoints" class="font-medium text-yellow-400"></span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Membro dal:</span><span id="userDate" class="font-medium"></span></div>
+            </div>
+            
+            <!-- Biancoverdi Card -->
+            <div class="mt-6 p-4 bg-gradient-to-br from-green-800 via-green-700 to-green-900 rounded-xl border border-green-500/30">
+                <h4 class="text-center font-bold mb-3">🎫 Biancoverdi Card</h4>
+                <div id="memberCard" class="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-xl p-4 border-2 border-green-500 shadow-xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <img id="cardLogo" src="" class="h-8 hidden">
+                        <span id="cardLogoEmoji" class="text-2xl">🏀</span>
+                        <span class="text-xs text-green-400 font-bold">CESTISTICA TV+</span>
+                    </div>
+                    <div class="flex gap-3 items-center mb-3">
+                        <div id="cardAvatar" class="w-14 h-14 bg-green-600 rounded-lg flex items-center justify-center text-xl font-bold overflow-hidden">
+                            <img id="cardAvatarImg" src="" class="w-full h-full object-cover hidden">
+                            <span id="cardAvatarInitial"></span>
+                        </div>
+                        <div class="flex-1">
+                            <p id="cardFullName" class="font-bold text-lg"></p>
+                            <p id="cardUsername" class="text-green-400 text-sm"></p>
+                        </div>
+                    </div>
+                    <div class="flex items-center justify-between text-xs">
+                        <div>
+                            <p class="text-gray-500">N° TESSERA</p>
+                            <p id="cardNumber" class="font-mono text-green-400"></p>
+                        </div>
+                        <div id="cardQR" class="w-16 h-16 bg-white p-1 rounded"></div>
+                    </div>
+                    <div class="mt-2 flex items-center justify-between">
+                        <span id="cardBadge" class="badge bg-green-600 text-xs"></span>
+                        <span id="cardDate" class="text-xs text-gray-500"></span>
+                    </div>
+                </div>
+                <button onclick="downloadCard()" class="w-full mt-4 bg-white/10 hover:bg-white/20 py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2">
+                    📥 Scarica Card
+                </button>
+            </div>
+            
             <button onclick="closeUserDetails()" class="w-full mt-6 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition">Chiudi</button>
         </div>
     </div>
 
     <!-- Main App -->
     <div id="mainApp" class="hidden">
-        <!-- Sync Indicator -->
         <div id="syncIndicator" class="sync-indicator online">
-            <span id="syncDot" class="w-2 h-2 bg-white rounded-full"></span>
+            <span class="w-2 h-2 bg-white rounded-full"></span>
             <span id="syncText">Sincronizzato</span>
         </div>
 
         <!-- Header -->
         <header class="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/95 to-transparent">
-            <div class="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+            <div class="container mx-auto px-4 py-3 flex items-center justify-between">
                 <div class="flex items-center gap-3">
-                    <button onclick="openMobileMenu()" class="md:hidden p-2 hover:bg-gray-700 rounded-lg">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
-                    </button>
+                    <button onclick="openMobileMenu()" class="md:hidden p-2 hover:bg-gray-700 rounded-lg text-xl">☰</button>
                     <div class="flex items-center gap-2 cursor-pointer" onclick="showHome()">
-                        <img id="headerLogo" src="" alt="Logo" class="h-10 md:h-12 hidden">
-                        <span id="headerLogoEmoji" class="text-3xl md:text-4xl">🏀</span>
+                        <img id="headerLogo" src="" class="h-10 md:h-12 hidden">
+                        <span id="headerLogoEmoji" class="text-3xl">🏀</span>
                     </div>
-                    <nav class="hidden lg:flex gap-4 xl:gap-6 ml-6">
-                        <button onclick="showHome()" class="hover:text-green-400 transition font-medium text-sm">Home</button>
-                        <button onclick="filterCategory('live')" class="hover:text-green-400 transition text-sm">Live</button>
-                        <button onclick="filterCategory('replays')" class="hover:text-green-400 transition text-sm">Full Match</button>
-                        <button onclick="filterCategory('highlights')" class="hover:text-green-400 transition text-sm">Highlights</button>
-                        <button onclick="filterCategory('altro')" class="hover:text-green-400 transition text-sm">Altro</button>
-                        <button onclick="showWatchlist()" class="hover:text-green-400 transition text-sm">La Mia Lista</button>
-                    </nav>
                 </div>
                 
+                <nav class="hidden md:flex items-center gap-6">
+                    <button onclick="showHome()" class="hover:text-green-400 transition">Home</button>
+                    <button onclick="showNews()" class="hover:text-green-400 transition">News</button>
+                    <button onclick="showCalendar()" class="hover:text-green-400 transition">Calendario</button>
+                    <button onclick="showPronostici()" class="hover:text-green-400 transition">Pronostici</button>
+                    <button onclick="showClassifica()" class="hover:text-green-400 transition">Classifica</button>
+                </nav>
+                
                 <div class="flex items-center gap-2 md:gap-4">
-                    <div class="relative">
-                        <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                        <input type="text" id="searchInput" placeholder="Cerca..." class="bg-gray-800 pl-10 pr-4 py-2 rounded-full text-sm w-32 md:w-48 border border-gray-700 focus:border-green-500" onkeyup="searchVideos()">
+                    <div class="relative hidden md:block">
+                        <input type="text" id="searchInput" placeholder="Cerca..." class="bg-gray-800 pl-10 pr-4 py-2 rounded-full text-sm w-40 border border-gray-700" onkeyup="searchVideos()">
+                        <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
+                    <button onclick="showWatchlist()" class="hidden md:flex items-center hover:text-green-400 transition">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                    </button>
                     <div class="relative group">
-                        <button class="flex items-center gap-1 md:gap-2 bg-green-600 px-3 md:px-4 py-2 rounded-full text-sm">
+                        <button class="flex items-center gap-2 bg-green-600 px-3 py-2 rounded-full text-sm">
                             <span id="currentUser" class="font-medium hidden md:inline"></span>
                             <span id="currentUserMobile" class="font-medium md:hidden"></span>
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
                         </button>
                         <div class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl hidden group-hover:block border border-gray-700">
-                            <button onclick="showUserDetails()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-t-lg">👤 Dettagli Utente</button>
-                            <button onclick="showAdmin()" id="adminBtn" class="w-full text-left px-4 py-3 hover:bg-gray-700 hidden">⚙️ Admin Panel</button>
+                            <button onclick="showUserDetails()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-t-lg">👤 Profilo</button>
+                            <button onclick="showBiancoverdiCard()" class="w-full text-left px-4 py-3 hover:bg-gray-700">🎫 Biancoverdi Card</button>
+                            <button onclick="showAdmin()" id="adminBtn" class="w-full text-left px-4 py-3 hover:bg-gray-700 hidden">⚙️ Admin</button>
                             <button onclick="logout()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-b-lg text-red-400">🚪 Esci</button>
                         </div>
                     </div>
@@ -260,101 +277,117 @@
         </header>
 
         <!-- Home Content -->
-        <main id="homeContent" class="pt-16 md:pt-20">
-            <!-- Dynamic Hero Carousel -->
+        <main id="homeContent" class="pt-16">
             <div id="heroSection" class="relative h-[50vh] md:h-[70vh] overflow-hidden">
-                <div id="heroBackground" class="absolute inset-0 bg-cover bg-center transition-all duration-1000" style="background-image: url('https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1600');"></div>
+                <div id="heroBackground" class="absolute inset-0 bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1600');"></div>
                 <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent"></div>
                 <div class="hero-gradient absolute inset-0"></div>
                 
-                <div class="absolute bottom-12 md:bottom-24 left-4 md:left-8 right-4 max-w-2xl">
-                    <span id="heroBadge" class="bg-green-600 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium mb-3 md:mb-4 inline-block">🏀 Cestistica Savonese</span>
-                    <h2 id="heroTitle" class="hero-text text-3xl md:text-5xl font-bold mb-2 md:mb-4 transition-all duration-500">Benvenuto su Cestistica TV</h2>
-                    <p id="heroDesc" class="hero-desc text-sm md:text-lg text-gray-300 mb-4 md:mb-6 line-clamp-2 md:line-clamp-none transition-all duration-500">Il club channel ufficiale della Cestistica Savonese. Guarda partite live, full match replays, highlights e contenuti esclusivi!</p>
-                    <div class="flex gap-2 md:gap-4">
-                        <button id="heroPlayBtn" onclick="playHeroVideo()" class="gradient-bg px-4 md:px-8 py-2 md:py-3 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition text-sm md:text-base">
-                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path></svg>
+                <div class="absolute bottom-16 left-4 md:left-8 right-4 max-w-2xl">
+                    <span id="heroBadge" class="bg-green-600 px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block">🏀 Cestistica</span>
+                    <h2 id="heroTitle" class="hero-text text-3xl md:text-5xl font-bold mb-4">Benvenuto su Cestistica TV</h2>
+                    <p id="heroDesc" class="hero-desc text-sm md:text-lg text-gray-300 mb-6"></p>
+                    <div class="flex gap-3 flex-wrap">
+                        <button id="heroPlayBtn" onclick="playHeroVideo()" class="gradient-bg px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             Guarda Ora
                         </button>
-                        <button onclick="addHeroToWatchlist()" class="bg-gray-700/80 px-4 md:px-8 py-2 md:py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-600 transition text-sm md:text-base">
-                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                            <span class="hidden md:inline">La Mia Lista</span>
-                            <span class="md:hidden">Lista</span>
+                        <button onclick="addHeroToWatchlist()" class="bg-gray-700/80 px-6 py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-600 transition">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                            La Mia Lista
                         </button>
                     </div>
                 </div>
                 
-                <!-- Carousel Indicators -->
-                <div id="carouselIndicators" class="absolute bottom-4 md:bottom-8 left-1/2 transform -translate-x-1/2 flex gap-2"></div>
-                
-                <!-- Carousel Navigation Arrows -->
-                <button onclick="prevHeroSlide()" class="absolute left-2 md:left-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 md:p-3 rounded-full transition">
-                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                <div id="carouselIndicators" class="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2"></div>
+                <button onclick="prevHeroSlide()" class="absolute left-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-3 rounded-full transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
                 </button>
-                <button onclick="nextHeroSlide()" class="absolute right-2 md:right-4 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 p-2 md:p-3 rounded-full transition">
-                    <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                <button onclick="nextHeroSlide()" class="absolute right-2 top-1/2 -translate-y-1/2 bg-black/50 hover:bg-black/70 p-3 rounded-full transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
                 </button>
             </div>
 
-            <div class="px-4 md:px-8 mt-6 md:mt-8 relative z-10 pb-20">
-                <section id="liveSection" class="mb-8 md:mb-12">
-                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4 flex items-center gap-2">
-                        <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse-slow"></span> Live
-                    </h3>
-                    <div id="liveVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+            <div class="px-4 md:px-8 mt-8 pb-20">
+                <section id="liveSection" class="mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-4 flex items-center gap-2"><span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span> Live</h3>
+                    <div id="liveVideos" class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar"></div>
                 </section>
 
-                <section id="replaysSection" class="mb-8 md:mb-12">
-                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4">🎬 Full Match Replays</h3>
-                    <div id="replaysVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                <section id="replaysSection" class="mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-4">🎬 Full Match Replays</h3>
+                    <div id="replaysVideos" class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar"></div>
                 </section>
 
-                <section id="highlightsSection" class="mb-8 md:mb-12">
-                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4">⚡ Highlights</h3>
-                    <div id="highlightsVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                <section id="highlightsSection" class="mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-4">⚡ Highlights</h3>
+                    <div id="highlightsVideos" class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar"></div>
                 </section>
 
-                <section id="altroSection" class="mb-8 md:mb-12">
-                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4">📺 Altro</h3>
-                    <div id="altroVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                <section id="altroSection" class="mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-4">📺 Altro</h3>
+                    <div id="altroVideos" class="flex gap-4 overflow-x-auto pb-4 custom-scrollbar"></div>
                 </section>
             </div>
         </main>
 
-        <!-- Video Player Page -->
-        <div id="videoPage" class="hidden pt-16 md:pt-20 pb-20">
+        <!-- Video Page -->
+        <div id="videoPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
-                <button onclick="showHome()" class="mb-4 flex items-center gap-2 text-green-400 hover:underline text-sm md:text-base">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
-                    Torna alla Home
-                </button>
+                <button onclick="showHome()" class="mb-4 flex items-center gap-2 text-green-400 hover:underline">← Torna alla Home</button>
                 
-                <div class="grid lg:grid-cols-3 gap-6 md:gap-8">
+                <div class="grid lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2">
                         <div class="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
                             <iframe id="videoPlayer" class="w-full h-full" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
                         </div>
                         
-                        <div class="mt-4 md:mt-6">
-                            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-                                <div>
+                        <div class="mt-6">
+                            <div class="flex flex-wrap items-start justify-between gap-4">
+                                <div class="flex-1">
                                     <h2 id="videoTitle" class="text-xl md:text-2xl font-bold"></h2>
-                                    <p id="videoCategory" class="text-green-400 mt-1 text-sm md:text-base"></p>
-                                    <p id="videoDate" class="text-gray-400 text-sm mt-1"></p>
+                                    <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-400">
+                                        <span id="videoViews" class="flex items-center gap-1">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
+                                            0 visualizzazioni
+                                        </span>
+                                        <span id="videoCategory"></span>
+                                        <span id="videoDate"></span>
+                                    </div>
                                 </div>
-                                <button id="watchlistBtn" onclick="toggleWatchlist()" class="flex items-center justify-center gap-2 bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm md:text-base">
-                                    <svg id="watchlistIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                                    <span id="watchlistText">Aggiungi alla Lista</span>
-                                </button>
+                                <div class="flex items-center gap-3">
+                                    <button onclick="toggleLike()" id="likeBtn" class="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-full hover:bg-gray-600 transition">
+                                        <svg id="likeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg>
+                                        <span id="likeCount">0</span>
+                                    </button>
+                                    <button onclick="openShareModal()" class="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-full hover:bg-gray-600 transition">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                                        Condividi
+                                    </button>
+                                </div>
                             </div>
-                            <p id="videoDescription" class="text-gray-300 mt-4 text-sm md:text-base"></p>
+                            <p id="videoDescription" class="text-gray-300 mt-4"></p>
                         </div>
 
-                        <div class="mt-6 md:mt-8 bg-gray-800 rounded-xl p-4 md:p-6">
+                        <!-- Live Chat (solo per video live) -->
+                        <div id="liveChatSection" class="mt-6 bg-gray-800 rounded-xl p-4 hidden">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                                <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
+                                💬 Chat Live
+                            </h3>
+                            <div id="liveChatMessages" class="chat-container bg-gray-900 rounded-lg p-3 mb-4 space-y-2"></div>
+                            <div class="flex gap-2">
+                                <input type="text" id="liveChatInput" placeholder="Scrivi un messaggio..." class="flex-1 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600" onkeypress="if(event.key==='Enter')sendLiveChat()">
+                                <button onclick="sendLiveChat()" class="gradient-bg px-4 py-2 rounded-lg font-semibold">Invia</button>
+                            </div>
+                        </div>
+
+                        <!-- Comments Section -->
+                        <div class="mt-8 bg-gray-800 rounded-xl p-4 md:p-6">
                             <h3 class="text-lg md:text-xl font-bold mb-4">💬 Commenti</h3>
-                            <div class="flex flex-col md:flex-row gap-3 md:gap-4 mb-6">
-                                <input type="text" id="commentInput" placeholder="Scrivi un commento..." class="flex-1 bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm md:text-base">
-                                <button onclick="addComment()" class="gradient-bg px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition text-sm md:text-base">Invia</button>
+                            <div class="flex gap-2 md:gap-4 mb-6">
+                                <input type="text" id="commentInput" placeholder="Scrivi un commento..." class="flex-1 bg-gray-700 px-3 md:px-4 py-2 md:py-3 rounded-lg text-sm border border-gray-600">
+                                <button onclick="addComment()" class="gradient-bg px-4 md:px-6 py-2 md:py-3 rounded-lg font-semibold text-sm">Invia</button>
                             </div>
                             <div id="commentsList" class="space-y-4"></div>
                         </div>
@@ -362,138 +395,347 @@
 
                     <div>
                         <h3 class="text-lg md:text-xl font-bold mb-4">Video Correlati</h3>
-                        <div id="relatedVideos" class="space-y-3 md:space-y-4"></div>
+                        <div id="relatedVideos" class="space-y-4"></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- News Page -->
+        <div id="newsPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">📰 News & Articoli</h2>
+                <div id="newsList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
+                <p id="emptyNews" class="text-gray-400 text-center py-20 hidden">Nessuna news disponibile</p>
+            </div>
+        </div>
+
+        <!-- News Article Page -->
+        <div id="newsArticlePage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4 max-w-4xl">
+                <button onclick="showNews()" class="mb-4 flex items-center gap-2 text-green-400 hover:underline">← Torna alle News</button>
+                <article id="newsArticleContent"></article>
+            </div>
+        </div>
+
+        <!-- Calendar Page -->
+        <div id="calendarPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">📅 Calendario Partite</h2>
+                <div id="calendarContent" class="bg-gray-800 rounded-xl p-6">
+                    <p id="noCalendar" class="text-gray-400 text-center py-10">Nessun calendario disponibile</p>
+                    <canvas id="pdfCanvas" class="hidden max-w-full mx-auto"></canvas>
+                    <div id="pdfControls" class="hidden flex items-center justify-center gap-4 mt-4">
+                        <button onclick="prevPdfPage()" class="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600">◀ Prec</button>
+                        <span id="pdfPageInfo" class="text-gray-400"></span>
+                        <button onclick="nextPdfPage()" class="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600">Succ ▶</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Pronostici Page -->
+        <div id="pronosticiPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">🎯 Pronostici</h2>
+                <p class="text-gray-400 mb-6">Vota il vincente e guadagna punti se indovini!</p>
+                <div id="pronosticiList" class="grid md:grid-cols-2 gap-6"></div>
+                <p id="emptyPronostici" class="text-gray-400 text-center py-20 hidden">Nessun pronostico disponibile</p>
+            </div>
+        </div>
+
+        <!-- Classifica Tifosi Page -->
+        <div id="classificaPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4 max-w-2xl">
+                <div class="flex items-center justify-between mb-6">
+                    <h2 class="text-2xl md:text-3xl font-bold">🏆 Classifica Tifosi</h2>
+                    <button onclick="showPointsInfo()" class="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition" title="Come funzionano i Biancoverdi Points?">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                    </button>
+                </div>
+                <div id="classificaList" class="space-y-3"></div>
+            </div>
+        </div>
+
+        <!-- Points Info Modal -->
+        <div id="pointsInfoModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+            <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold text-green-400">💚 Biancoverdi Points</h3>
+                    <button onclick="closePointsInfo()" class="text-gray-400 hover:text-white">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                    </button>
+                </div>
+                
+                <p class="text-gray-300 mb-4">Guadagna punti partecipando attivamente alla community biancoverde!</p>
+                
+                <h4 class="font-semibold text-white mb-2">⭐ Come Guadagnare Punti</h4>
+                <div class="bg-gray-700 rounded-lg p-3 mb-4 space-y-2 text-sm">
+                    <div class="flex justify-between"><span class="text-gray-300">🎬 Guarda un video</span><span class="text-green-400 font-bold">+5</span></div>
+                    <div class="flex justify-between"><span class="text-gray-300">💬 Scrivi un commento</span><span class="text-green-400 font-bold">+10</span></div>
+                    <div class="flex justify-between"><span class="text-gray-300">👍 Metti like</span><span class="text-green-400 font-bold">+2</span></div>
+                    <div class="flex justify-between"><span class="text-gray-300">📝 Chat live</span><span class="text-green-400 font-bold">+2</span></div>
+                    <div class="flex justify-between"><span class="text-gray-300">🎯 Vota un pronostico</span><span class="text-green-400 font-bold">+5</span></div>
+                    <div class="flex justify-between"><span class="text-gray-300">✅ Pronostico corretto</span><span class="text-green-400 font-bold">+50</span></div>
+                    <div class="flex justify-between"><span class="text-gray-300">🔐 Login giornaliero</span><span class="text-green-400 font-bold">+3</span></div>
+                </div>
+                
+                <h4 class="font-semibold text-white mb-2">🏅 Badge Sbloccabili</h4>
+                <div class="bg-gray-700 rounded-lg p-3 space-y-2 text-sm">
+                    <div class="flex justify-between items-center"><span class="text-gray-300">🌱 Nuovo Arrivato</span><span class="text-gray-400">0 punti</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-300">👀 Spettatore</span><span class="text-gray-400">50 punti</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-300">🏀 Tifoso</span><span class="text-gray-400">150 punti</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-300">🔥 Super Tifoso</span><span class="text-gray-400">300 punti</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-300">💚 Ultras</span><span class="text-gray-400">500 punti</span></div>
+                    <div class="flex justify-between items-center"><span class="text-gray-300">👑 Leggenda</span><span class="text-yellow-400 font-bold">1000 punti</span></div>
+                </div>
+                
+                <button onclick="closePointsInfo()" class="w-full mt-6 gradient-bg py-3 rounded-lg font-semibold hover:opacity-90 transition">Ho Capito!</button>
+            </div>
+        </div>
+
+        <!-- Biancoverdi Card Page -->
+        <div id="biancoverdiCardPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4 max-w-lg">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center">🎫 Biancoverdi Card</h2>
+                <p class="text-gray-400 text-center mb-6">La tua tessera digitale del tifoso biancoverde</p>
+                
+                <!-- Card Preview -->
+                <div id="cardPageContainer" class="bg-gradient-to-br from-green-800 via-green-700 to-green-900 rounded-2xl p-6 border border-green-500/30 shadow-2xl">
+                    <div id="memberCardPage" class="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-xl p-5 border-2 border-green-500 shadow-xl">
+                        <div class="flex items-center justify-between mb-4">
+                            <img id="cardLogoPage" src="" class="h-10 hidden">
+                            <span id="cardLogoEmojiPage" class="text-3xl">🏀</span>
+                            <span class="text-sm text-green-400 font-bold tracking-wider">CESTISTICA TV+</span>
+                        </div>
+                        <div class="flex gap-4 items-center mb-4">
+                            <div id="cardAvatarPage" class="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center text-2xl font-bold overflow-hidden shadow-lg">
+                                <img id="cardAvatarImgPage" src="" class="w-full h-full object-cover hidden">
+                                <span id="cardAvatarInitialPage"></span>
+                            </div>
+                            <div class="flex-1">
+                                <p id="cardFullNamePage" class="font-bold text-xl"></p>
+                                <p id="cardUsernamePage" class="text-green-400"></p>
+                            </div>
+                        </div>
+                        <div class="flex items-end justify-between">
+                            <div>
+                                <p class="text-gray-500 text-xs uppercase tracking-wider">N° Tessera</p>
+                                <p id="cardNumberPage" class="font-mono text-green-400 text-lg"></p>
+                                <div class="mt-2">
+                                    <span id="cardBadgePage" class="badge bg-green-600 text-sm px-3 py-1"></span>
+                                </div>
+                                <p id="cardDatePage" class="text-xs text-gray-500 mt-2"></p>
+                            </div>
+                            <div id="cardQRPage" class="w-20 h-20 bg-white p-1.5 rounded-lg shadow-lg"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-6 space-y-3">
+                    <button onclick="downloadCardPage()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-semibold transition flex items-center justify-center gap-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                        Scarica Card
+                    </button>
+                    
+                    <button onclick="addToGoogleWallet()" class="w-full bg-white text-gray-900 hover:bg-gray-100 py-4 rounded-xl font-semibold transition flex items-center justify-center gap-3">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
+                        Aggiungi a Google Wallet
+                    </button>
+                    
+                    <button onclick="addToAppleWallet()" class="w-full bg-black hover:bg-gray-900 py-4 rounded-xl font-semibold transition flex items-center justify-center gap-3 border border-gray-700">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        Aggiungi a Apple Wallet
+                    </button>
+                </div>
+
+                <!-- Card Info -->
+                <div class="mt-8 bg-gray-800 rounded-xl p-5">
+                    <h3 class="font-bold mb-4 flex items-center gap-2">ℹ️ Informazioni Card</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex justify-between"><span class="text-gray-400">Titolare:</span><span id="infoFullName" class="font-medium"></span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Username:</span><span id="infoUsername" class="font-medium text-green-400"></span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">N° Tessera:</span><span id="infoCardNumber" class="font-mono"></span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Livello:</span><span id="infoBadge"></span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Biancoverdi Points:</span><span id="infoPoints" class="text-yellow-400 font-bold"></span></div>
+                        <div class="flex justify-between"><span class="text-gray-400">Membro dal:</span><span id="infoDate"></span></div>
+                    </div>
+                </div>
+
+                <p class="text-center text-gray-500 text-xs mt-6">Mostra questa card per accedere a eventi e promozioni esclusive</p>
             </div>
         </div>
 
         <!-- Watchlist Page -->
-        <div id="watchlistPage" class="hidden pt-20 md:pt-24 pb-20">
+        <div id="watchlistPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
-                <h2 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">❤️ La Mia Lista</h2>
-                <div id="watchlistVideos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4"></div>
-                <p id="emptyWatchlist" class="text-gray-400 text-center py-12 md:py-20 hidden">La tua lista è vuota. Aggiungi video cliccando sul cuore!</p>
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">❤️ La Mia Lista</h2>
+                <div id="watchlistVideos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4"></div>
+                <p id="emptyWatchlist" class="text-gray-400 text-center py-20 hidden">La tua lista è vuota</p>
             </div>
         </div>
 
-        <!-- Admin Panel -->
-        <div id="adminPage" class="hidden pt-20 md:pt-24 pb-20">
+        <!-- Admin Page -->
+        <div id="adminPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
-                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-                    <h2 class="text-2xl md:text-3xl font-bold">⚙️ Admin Panel</h2>
-                    <div class="flex items-center gap-2">
-                        <span id="dbStatus" class="text-sm px-3 py-1 rounded-full bg-green-600">🔥 Firebase Connesso</span>
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">⚙️ Pannello Admin</h2>
+                
+                <!-- Stats Dashboard -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold text-green-400" id="statVideos">0</p>
+                        <p class="text-gray-400 text-sm">Video</p>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold text-blue-400" id="statUsers">0</p>
+                        <p class="text-gray-400 text-sm">Utenti</p>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold text-yellow-400" id="statViews">0</p>
+                        <p class="text-gray-400 text-sm">Visualizzazioni</p>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 text-center">
+                        <p class="text-3xl font-bold text-purple-400" id="statNews">0</p>
+                        <p class="text-gray-400 text-sm">News</p>
                     </div>
                 </div>
-                
-                <div class="grid lg:grid-cols-2 gap-6 md:gap-8">
-                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg md:text-xl font-bold mb-4">➕ Aggiungi Nuovo Video</h3>
-                        <input type="text" id="newVideoTitle" placeholder="Titolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm md:text-base">
-                        <input type="text" id="newVideoUrl" placeholder="URL YouTube (video, live, shorts)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm md:text-base">
-                        <textarea id="newVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-24 text-sm md:text-base"></textarea>
-                        <select id="newVideoCategory" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm md:text-base">
-                            <option value="live">Live</option>
-                            <option value="replays">Full Match Replays</option>
-                            <option value="highlights">Highlights</option>
-                            <option value="altro">Altro</option>
-                        </select>
-                        <input type="text" id="newVideoThumbnail" placeholder="URL Thumbnail (opzionale - auto da YouTube)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-4 border border-gray-600 text-sm md:text-base">
-                        <button onclick="addVideo()" class="w-full gradient-bg py-3 rounded-lg font-semibold hover:opacity-90 transition">Aggiungi Video</button>
-                    </div>
 
+                <!-- Admin Tabs -->
+                <div class="flex flex-wrap gap-2 mb-6">
+                    <button onclick="showAdminTab('videos')" class="tab-btn active px-4 py-2 rounded-lg bg-gray-700" data-tab="videos">📹 Video</button>
+                    <button onclick="showAdminTab('news')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="news">📰 News</button>
+                    <button onclick="showAdminTab('calendar')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="calendar">📅 Calendario</button>
+                    <button onclick="showAdminTab('pronostici')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="pronostici">🎯 Pronostici</button>
+                    <button onclick="showAdminTab('users')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="users">👥 Utenti</button>
+                    <button onclick="showAdminTab('settings')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="settings">🖼️ Logo</button>
+                </div>
+
+                <!-- Videos Tab -->
+                <div id="adminVideosTab" class="admin-tab">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">➕ Aggiungi Video</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <input type="text" id="newVideoTitle" placeholder="Titolo video" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <input type="text" id="newVideoUrl" placeholder="URL YouTube (video o live)" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <select id="newVideoCategory" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                                <option value="live">🔴 Live</option>
+                                <option value="replays">🎬 Full Match Replays</option>
+                                <option value="highlights">⚡ Highlights</option>
+                                <option value="altro">📺 Altro</option>
+                            </select>
+                            <input type="text" id="newVideoThumbnail" placeholder="URL Thumbnail (opzionale)" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                        </div>
+                        <textarea id="newVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mt-4 border border-gray-600 h-20"></textarea>
+                        <button onclick="addVideo()" class="mt-4 gradient-bg px-6 py-3 rounded-lg font-semibold">Aggiungi Video</button>
+                    </div>
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg md:text-xl font-bold mb-4">🖼️ Logo del Sito</h3>
-                        <div class="border-2 border-dashed border-gray-600 rounded-xl p-6 md:p-8 text-center">
-                            <img id="logoPreview" src="" alt="Logo Preview" class="h-20 md:h-24 mx-auto mb-4 hidden">
-                            <p class="text-gray-400 mb-4 text-sm md:text-base">Carica il logo della Cestistica Savonese</p>
-                            <input type="file" id="logoInput" accept="image/*" onchange="uploadLogo(event)" class="hidden">
-                            <div class="flex flex-col md:flex-row gap-2 justify-center">
-                                <button onclick="document.getElementById('logoInput').click()" class="bg-green-600 px-6 py-2 rounded-lg hover:bg-green-700 transition text-sm">Seleziona Immagine</button>
-                                <button onclick="removeLogo()" class="bg-red-600 px-6 py-2 rounded-lg hover:bg-red-700 transition text-sm">Rimuovi</button>
+                        <h3 class="text-lg font-bold mb-4">📹 Gestione Video</h3>
+                        <div id="adminVideoList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- News Tab -->
+                <div id="adminNewsTab" class="admin-tab hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">➕ Aggiungi News</h3>
+                        <input type="text" id="newNewsTitle" placeholder="Titolo articolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
+                        <textarea id="newNewsContent" placeholder="Contenuto dell'articolo..." class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 h-40 mb-4"></textarea>
+                        <input type="text" id="newNewsVideo" placeholder="URL Video YouTube (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
+                        <div class="mb-4">
+                            <label class="block text-gray-400 mb-2">📷 Immagini (max 5)</label>
+                            <input type="file" id="newNewsImages" accept="image/*" multiple class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                        </div>
+                        <button onclick="addNews()" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Pubblica News</button>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">📰 Gestione News</h3>
+                        <div id="adminNewsList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Calendar Tab -->
+                <div id="adminCalendarTab" class="admin-tab hidden">
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-lg font-bold mb-4">📅 Carica Calendario (PDF)</h3>
+                        <input type="file" id="calendarPdf" accept="application/pdf" onchange="uploadCalendar(event)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
+                        <p class="text-gray-400 text-sm">Carica un file PDF con il calendario delle partite</p>
+                        <button onclick="removeCalendar()" class="mt-4 bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700">🗑️ Rimuovi Calendario</button>
+                    </div>
+                </div>
+
+                <!-- Pronostici Tab -->
+                <div id="adminPronosticiTab" class="admin-tab hidden">
+                    <div class="bg-gray-800 rounded-xl p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">➕ Crea Pronostico</h3>
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <input type="text" id="pronoTeam1" placeholder="Squadra 1 (Casa)" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <input type="text" id="pronoTeam2" placeholder="Squadra 2 (Ospite)" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                        </div>
+                        <input type="datetime-local" id="pronoDate" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
+                        <button onclick="addPronostico()" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Crea Pronostico</button>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-lg font-bold mb-4">🎯 Gestione Pronostici</h3>
+                        <div id="adminPronosticiList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Users Tab -->
+                <div id="adminUsersTab" class="admin-tab hidden">
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-lg font-bold mb-4">👥 Membri Registrati</h3>
+                        <div id="membersList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                </div>
+
+                <!-- Settings Tab -->
+                <div id="adminSettingsTab" class="admin-tab hidden">
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-lg font-bold mb-4">🖼️ Logo Sito</h3>
+                        <div class="flex flex-col items-center gap-4">
+                            <img id="logoPreview" src="" class="h-20 hidden">
+                            <p id="noLogoText" class="text-gray-400">Nessun logo caricato</p>
+                            <div class="flex gap-3">
+                                <label class="gradient-bg px-4 py-2 rounded-lg cursor-pointer hover:opacity-90">
+                                    📤 Carica Logo
+                                    <input type="file" accept="image/*" onchange="uploadLogo(event)" class="hidden">
+                                </label>
+                                <button onclick="removeLogo()" class="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700">🗑️ Rimuovi</button>
                             </div>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <div class="bg-gray-800 rounded-xl p-4 md:p-6 mt-6 md:mt-8">
-                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
-                        <h3 class="text-lg md:text-xl font-bold">📹 Gestione Video</h3>
-                        <button onclick="refreshVideos()" class="gradient-bg px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2 text-sm md:text-base">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
-                            Aggiorna Lista
-                        </button>
-                    </div>
-                    <div id="adminVideoList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+        <!-- Edit Video Modal -->
+        <div id="editVideoModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+            <div class="bg-gray-800 p-6 rounded-2xl max-w-lg w-full border border-green-600/30">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-xl font-bold">✏️ Modifica Video</h3>
+                    <button onclick="closeEditModal()" class="text-gray-400 hover:text-white">✕</button>
                 </div>
-
-                <!-- Edit Video Modal -->
-                <div id="editVideoModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
-                    <div class="bg-gray-800 p-4 md:p-6 rounded-2xl max-w-lg w-full border border-green-600/30 my-8">
-                        <div class="flex items-center justify-between mb-4">
-                            <h3 class="text-lg md:text-xl font-bold">✏️ Modifica Video</h3>
-                            <button onclick="closeEditModal()" class="text-gray-400 hover:text-white">
-                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                            </button>
-                        </div>
-                        <input type="hidden" id="editVideoId">
-                        <label class="block text-sm text-gray-400 mb-1">Titolo</label>
-                        <input type="text" id="editVideoTitle" placeholder="Titolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
-                        <label class="block text-sm text-gray-400 mb-1">URL YouTube</label>
-                        <input type="text" id="editVideoUrl" placeholder="URL YouTube" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
-                        <label class="block text-sm text-gray-400 mb-1">Descrizione</label>
-                        <textarea id="editVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-20 text-sm"></textarea>
-                        <label class="block text-sm text-gray-400 mb-1">Categoria</label>
-                        <select id="editVideoCategory" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
-                            <option value="live">Live</option>
-                            <option value="replays">Full Match Replays</option>
-                            <option value="highlights">Highlights</option>
-                            <option value="altro">Altro</option>
-                        </select>
-                        <label class="block text-sm text-gray-400 mb-1">URL Thumbnail</label>
-                        <input type="text" id="editVideoThumbnail" placeholder="URL Thumbnail" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
-                        <label class="block text-sm text-gray-400 mb-1">Data</label>
-                        <input type="date" id="editVideoDate" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-4 border border-gray-600 text-sm">
-                        <div class="flex flex-col md:flex-row gap-3">
-                            <button onclick="saveVideoEdit()" class="flex-1 gradient-bg py-3 rounded-lg font-semibold hover:opacity-90 transition text-sm">💾 Salva Modifiche</button>
-                            <button onclick="closeEditModal()" class="flex-1 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition text-sm">Annulla</button>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-gray-800 rounded-xl p-4 md:p-6 mt-6 md:mt-8">
-                    <h3 class="text-lg md:text-xl font-bold mb-4">👥 Membri Registrati (cestistica tv+)</h3>
-                    <div id="membersList" class="overflow-x-auto">
-                        <table class="w-full text-sm">
-                            <thead class="bg-gray-700">
-                                <tr>
-                                    <th class="px-3 md:px-4 py-3 text-left">Nome</th>
-                                    <th class="px-3 md:px-4 py-3 text-left">Username</th>
-                                    <th class="px-3 md:px-4 py-3 text-left hidden md:table-cell">Email</th>
-                                    <th class="px-3 md:px-4 py-3 text-left hidden md:table-cell">Data</th>
-                                    <th class="px-3 md:px-4 py-3 text-left">Tipo</th>
-                                </tr>
-                            </thead>
-                            <tbody id="membersTableBody"></tbody>
-                        </table>
-                    </div>
+                <input type="hidden" id="editVideoId">
+                <input type="text" id="editVideoTitle" placeholder="Titolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
+                <input type="text" id="editVideoUrl" placeholder="URL YouTube" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
+                <textarea id="editVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-20"></textarea>
+                <select id="editVideoCategory" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-4 border border-gray-600">
+                    <option value="live">🔴 Live</option>
+                    <option value="replays">🎬 Full Match Replays</option>
+                    <option value="highlights">⚡ Highlights</option>
+                    <option value="altro">📺 Altro</option>
+                </select>
+                <div class="flex gap-3">
+                    <button onclick="saveVideoEdit()" class="flex-1 gradient-bg py-3 rounded-lg font-semibold">💾 Salva</button>
+                    <button onclick="closeEditModal()" class="flex-1 bg-gray-600 py-3 rounded-lg font-semibold">Annulla</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <footer class="bg-gray-900 border-t border-gray-800 py-6 md:py-8 mt-auto">
-        <div class="container mx-auto px-4 text-center">
-            <p class="text-gray-400 text-sm md:text-base">© 2024 Cestistica TV - Club Channel Biancoverde</p>
-            <p class="text-green-400 text-xs md:text-sm mt-2">cestistica tv+ | Membership Gratuita</p>
-        </div>
-    </footer>
-
     <script>
-        // ==========================================
-        // FIREBASE CONFIGURATION (HARDCODED)
-        // ==========================================
+        // Firebase Configuration
         const firebaseConfig = {
             apiKey: "AIzaSyCKknCmCSgWvH-qeP94ppZzFdK2sRSudgQ",
             authDomain: "cestistica-tv-d09dd.firebaseapp.com",
@@ -504,351 +746,179 @@
             appId: "1:668272080170:web:cd3badb4798d26fa26da53"
         };
 
-        // State
+        // Global State
+        let db = null;
         let currentUser = null;
         let currentVideo = null;
-        let db = null;
         let videosCache = [];
         let usersCache = [];
-        let heroSlideIndex = 0;
+        let newsCache = [];
+        let pronosticiCache = [];
         let heroVideos = [];
+        let heroSlideIndex = 0;
         let heroInterval = null;
+        let pdfDoc = null;
+        let pdfPage = 1;
+        let deferredPrompt = null;
 
-        // Default data
-        const defaultVideos = [
-            { id: 'v1', title: "Cestistica Savonese vs Riviera Live", category: "live", url: "https://www.youtube.com/live/3qNXZPCmxf8", thumbnail: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400", description: "Partita live del campionato regionale", date: "2024-01-15", comments: [] },
-            { id: 'v2', title: "Full Match: Cestistica vs Albenga", category: "replays", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumbnail: "https://images.unsplash.com/photo-1559692048-79a3f837883d?w=400", description: "Replay completo della partita casalinga", date: "2024-01-10", comments: [] },
-            { id: 'v3', title: "Top 10 Giocate Stagione", category: "highlights", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumbnail: "https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=400", description: "Le migliori giocate della stagione biancoverde", date: "2024-01-08", comments: [] },
-            { id: 'v4', title: "Intervista Coach", category: "altro", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumbnail: "https://images.unsplash.com/photo-1504450758481-7338bbe7f5a0?w=400", description: "Intervista esclusiva al nostro coach", date: "2024-01-05", comments: [] }
+        // PWA Install
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('pwaInstall').classList.remove('hidden');
+        });
+
+        document.getElementById('pwaInstall').addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                deferredPrompt = null;
+                document.getElementById('pwaInstall').classList.add('hidden');
+            }
+        });
+
+        // Badge System
+        const badges = [
+            { name: 'Nuovo Arrivato', emoji: '🌱', points: 0 },
+            { name: 'Spettatore', emoji: '👀', points: 50 },
+            { name: 'Tifoso', emoji: '🏀', points: 150 },
+            { name: 'Super Tifoso', emoji: '🔥', points: 300 },
+            { name: 'Ultras', emoji: '💚', points: 500 },
+            { name: 'Leggenda', emoji: '👑', points: 1000 }
         ];
 
-        const defaultUsers = [
-            { id: 'admin1', username: 'tatte13', password: 'Matteo13', email: 'admin@cestistica.tv', nome: 'Admin', cognome: 'Cestistica', isAdmin: true, date: '2024-01-01' }
-        ];
+        function getUserBadge(points) {
+            let badge = badges[0];
+            for (const b of badges) {
+                if (points >= b.points) badge = b;
+            }
+            return badge;
+        }
+
+        function addPoints(amount) {
+            if (!currentUser) return;
+            currentUser.points = (currentUser.points || 0) + amount;
+            db.ref('users/' + currentUser.id).update({ points: currentUser.points });
+            localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+        }
 
         // Initialize Firebase
         function initFirebase() {
             try {
                 firebase.initializeApp(firebaseConfig);
                 db = firebase.database();
-
-                // Initialize default data if empty
-                db.ref('videos').once('value').then(snapshot => {
-                    if (!snapshot.exists()) {
-                        defaultVideos.forEach(v => {
-                            db.ref('videos/' + v.id).set(v);
-                        });
-                    }
-                });
-
-                db.ref('users').once('value').then(snapshot => {
-                    if (!snapshot.exists()) {
-                        defaultUsers.forEach(u => {
-                            db.ref('users/' + u.id).set(u);
-                        });
-                    }
-                });
-
-                // Listen for real-time updates
-                db.ref('videos').on('value', snapshot => {
+                
+                db.ref('videos').on('value', (snapshot) => {
                     videosCache = [];
-                    snapshot.forEach(child => {
-                        videosCache.push({ ...child.val(), id: child.key });
+                    snapshot.forEach((child) => {
+                        videosCache.push({ id: child.key, ...child.val() });
                     });
                     if (currentUser) {
                         loadVideos();
                         initHeroCarousel();
+                        updateAdminStats();
                     }
-                    showSyncStatus(true);
                 });
 
-                db.ref('users').on('value', snapshot => {
+                db.ref('users').on('value', (snapshot) => {
                     usersCache = [];
-                    snapshot.forEach(child => {
-                        usersCache.push({ ...child.val(), id: child.key });
+                    snapshot.forEach((child) => {
+                        usersCache.push({ id: child.key, ...child.val() });
                     });
                     if (currentUser && currentUser.isAdmin) loadMembersList();
                 });
 
-                db.ref('settings/logo').on('value', snapshot => {
-                    if (snapshot.exists()) {
-                        applyLogo(snapshot.val());
-                    }
+                db.ref('news').on('value', (snapshot) => {
+                    newsCache = [];
+                    snapshot.forEach((child) => {
+                        newsCache.push({ id: child.key, ...child.val() });
+                    });
+                    updateAdminStats();
                 });
 
-                // Connection state
-                db.ref('.info/connected').on('value', snapshot => {
-                    showSyncStatus(snapshot.val() === true);
+                db.ref('pronostici').on('value', (snapshot) => {
+                    pronosticiCache = [];
+                    snapshot.forEach((child) => {
+                        pronosticiCache.push({ id: child.key, ...child.val() });
+                    });
+                });
+
+                db.ref('settings/logo').on('value', (snapshot) => {
+                    applyLogo(snapshot.val());
+                });
+
+                db.ref('.info/connected').on('value', (snapshot) => {
+                    updateSyncStatus(snapshot.val() === true);
                 });
 
                 document.getElementById('loadingOverlay').style.display = 'none';
-                checkSession();
-
-            } catch (e) {
-                console.error('Firebase error:', e);
-                showSyncStatus(false);
+                checkAuth();
+            } catch (error) {
+                console.error('Firebase init error:', error);
                 document.getElementById('loadingOverlay').style.display = 'none';
-                checkSession();
+                checkAuth();
             }
         }
 
-        function showSyncStatus(online) {
+        function updateSyncStatus(online) {
             const indicator = document.getElementById('syncIndicator');
             const text = document.getElementById('syncText');
-            
-            if (online) {
-                indicator.className = 'sync-indicator online';
-                text.textContent = 'Sincronizzato';
+            indicator.className = online ? 'sync-indicator online' : 'sync-indicator offline';
+            text.textContent = online ? 'Sincronizzato' : 'Offline';
+        }
+
+        // Auth Functions
+        function checkAuth() {
+            const saved = localStorage.getItem('cesticaUser');
+            if (saved) {
+                currentUser = JSON.parse(saved);
+                showMainApp();
             } else {
-                indicator.className = 'sync-indicator offline';
-                text.textContent = 'Offline';
+                document.getElementById('authModal').classList.remove('hidden');
             }
         }
 
-        // Data access functions
-        function getVideos() {
-            return videosCache;
-        }
-
-        function getUsers() {
-            return usersCache;
-        }
-
-        function saveVideo(video) {
-            return db.ref('videos/' + video.id).set(video);
-        }
-
-        function deleteVideoFromDB(id) {
-            return db.ref('videos/' + id).remove();
-        }
-
-        function saveUser(user) {
-            return db.ref('users/' + user.id).set(user);
-        }
-
-        function saveLogo(logoData) {
-            return db.ref('settings/logo').set(logoData);
-        }
-
-        function removeLogo() {
-            db.ref('settings/logo').remove();
-            applyLogo(null);
-            showNotification('Logo rimosso');
-        }
-
-        function applyLogo(logo) {
-            const elements = ['headerLogo', 'authLogo', 'logoPreview', 'mobileLogo'];
-            const placeholders = ['headerLogoEmoji', 'authLogoPlaceholder'];
-            
-            if (logo) {
-                elements.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) { el.src = logo; el.classList.remove('hidden'); }
-                });
-                placeholders.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.classList.add('hidden');
-                });
-            } else {
-                elements.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.classList.add('hidden');
-                });
-                placeholders.forEach(id => {
-                    const el = document.getElementById(id);
-                    if (el) el.classList.remove('hidden');
-                });
-            }
-        }
-
-        // Mobile Menu
-        function openMobileMenu() {
-            document.getElementById('mobileMenu').classList.add('open');
-            document.getElementById('mobileMenuOverlay').classList.remove('hidden');
-            document.body.style.overflow = 'hidden';
-        }
-
-        function closeMobileMenu() {
-            document.getElementById('mobileMenu').classList.remove('open');
-            document.getElementById('mobileMenuOverlay').classList.add('hidden');
-            document.body.style.overflow = '';
-        }
-
-        // User Details
-        function showUserDetails() {
-            if (!currentUser) return;
-            
-            // Handle profile photo
-            const avatarImg = document.getElementById('userAvatarImg');
-            const avatarInitial = document.getElementById('userAvatarInitial');
-            const removeBtn = document.getElementById('removePhotoBtn');
-            
-            if (currentUser.profilePhoto) {
-                avatarImg.src = currentUser.profilePhoto;
-                avatarImg.classList.remove('hidden');
-                avatarInitial.classList.add('hidden');
-                removeBtn.classList.remove('hidden');
-            } else {
-                avatarImg.classList.add('hidden');
-                avatarInitial.classList.remove('hidden');
-                avatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
-                removeBtn.classList.add('hidden');
-            }
-            
-            document.getElementById('userFullName').textContent = `${currentUser.nome || ''} ${currentUser.cognome || ''}`.trim() || currentUser.username;
-            document.getElementById('userUsername').textContent = currentUser.username;
-            document.getElementById('userEmail').textContent = currentUser.email;
-            document.getElementById('userDate').textContent = currentUser.date;
-            document.getElementById('userType').innerHTML = currentUser.isAdmin ? '<span class="text-yellow-400">Admin</span>' : '<span class="text-green-400">cestistica tv+</span>';
-            document.getElementById('userDetailsModal').classList.remove('hidden');
-        }
-
-        function closeUserDetails() {
-            document.getElementById('userDetailsModal').classList.add('hidden');
-        }
-        
-        // Profile Photo functions
-        function uploadProfilePhoto(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            
-            // Check file size (max 500KB for Firebase)
-            if (file.size > 500000) {
-                showNotification('⚠️ Immagine troppo grande (max 500KB)');
-                return;
-            }
-            
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                // Resize image to reduce size
-                const img = new Image();
-                img.onload = function() {
-                    const canvas = document.createElement('canvas');
-                    const maxSize = 200;
-                    let width = img.width;
-                    let height = img.height;
-                    
-                    if (width > height) {
-                        if (width > maxSize) {
-                            height *= maxSize / width;
-                            width = maxSize;
-                        }
-                    } else {
-                        if (height > maxSize) {
-                            width *= maxSize / height;
-                            height = maxSize;
-                        }
-                    }
-                    
-                    canvas.width = width;
-                    canvas.height = height;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, width, height);
-                    
-                    const resizedPhoto = canvas.toDataURL('image/jpeg', 0.8);
-                    
-                    // Update user in Firebase
-                    currentUser.profilePhoto = resizedPhoto;
-                    saveUser(currentUser);
-                    localStorage.setItem('cesticaCurrentUser', JSON.stringify(currentUser));
-                    
-                    // Update UI
-                    showUserDetails();
-                    updateHeaderAvatar();
-                    showNotification('📷 Foto profilo aggiornata!');
-                };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-        
-        function removeProfilePhoto() {
-            if (!confirm('Vuoi rimuovere la foto profilo?')) return;
-            
-            delete currentUser.profilePhoto;
-            saveUser(currentUser);
-            localStorage.setItem('cesticaCurrentUser', JSON.stringify(currentUser));
-            
-            showUserDetails();
-            updateHeaderAvatar();
-            showNotification('🗑️ Foto profilo rimossa');
-        }
-        
-        function updateHeaderAvatar() {
-            // This function can be extended to show avatar in header if needed
-        }
-        
-        function getUserAvatar(user) {
-            if (user.profilePhoto) {
-                return `<img src="${user.profilePhoto}" alt="${user.username}" class="w-full h-full object-cover rounded-full">`;
-            }
-            return user.username.charAt(0).toUpperCase();
-        }
-
-        // Auth
         function login() {
-            const username = document.getElementById('loginUsername').value;
+            const username = document.getElementById('loginUsername').value.trim();
             const password = document.getElementById('loginPassword').value;
-            const users = getUsers();
-            const user = users.find(u => u.username === username && u.password === password);
             
+            if (!username || !password) return showAuthError('Compila tutti i campi');
+
+            const user = usersCache.find(u => u.username === username && u.password === password);
             if (user) {
                 currentUser = user;
-                localStorage.setItem('cesticaCurrentUser', JSON.stringify(user));
-                document.getElementById('authModal').classList.add('hidden');
-                document.getElementById('mainApp').classList.remove('hidden');
-                document.getElementById('currentUser').textContent = user.username;
-                document.getElementById('currentUserMobile').textContent = user.username.substring(0, 2).toUpperCase();
-                if (user.isAdmin) {
-                    document.getElementById('adminBtn').classList.remove('hidden');
-                    document.getElementById('mobileAdminBtn').classList.remove('hidden');
-                }
-                loadVideos();
+                localStorage.setItem('cesticaUser', JSON.stringify(user));
+                addPoints(3); // Daily login bonus
+                showMainApp();
             } else {
-                showAuthError('Username o password non corretti');
+                showAuthError('Username o password errati');
             }
         }
 
         function register() {
-            const nome = document.getElementById('regNome').value;
-            const cognome = document.getElementById('regCognome').value;
-            const username = document.getElementById('regUsername').value;
-            const email = document.getElementById('regEmail').value;
+            const nome = document.getElementById('regNome').value.trim();
+            const cognome = document.getElementById('regCognome').value.trim();
+            const username = document.getElementById('regUsername').value.trim();
+            const email = document.getElementById('regEmail').value.trim();
             const password = document.getElementById('regPassword').value;
-            
-            if (!nome || !cognome || !username || !email || !password) {
-                showAuthError('Compila tutti i campi');
-                return;
-            }
-            
-            const users = getUsers();
-            if (users.find(u => u.username === username)) {
-                showAuthError('Username già esistente');
-                return;
-            }
-            
-            const newUser = { 
-                id: 'user_' + Date.now(),
-                username, email, password, nome, cognome, 
-                isAdmin: false, 
-                date: new Date().toISOString().split('T')[0] 
-            };
-            
-            saveUser(newUser);
-            currentUser = newUser;
-            localStorage.setItem('cesticaCurrentUser', JSON.stringify(newUser));
-            
-            showNotification(`🎉 Benvenuto ${nome}! Registrazione completata`);
-            
-            document.getElementById('authModal').classList.add('hidden');
-            document.getElementById('mainApp').classList.remove('hidden');
-            document.getElementById('currentUser').textContent = newUser.username;
-            document.getElementById('currentUserMobile').textContent = newUser.username.substring(0, 2).toUpperCase();
-            loadVideos();
+
+            if (!nome || !cognome || !username || !email || !password) return showAuthError('Compila tutti i campi');
+            if (usersCache.find(u => u.username === username)) return showAuthError('Username già in uso');
+
+            const newUser = { nome, cognome, username, email, password, isAdmin: false, points: 10, date: new Date().toLocaleDateString('it-IT') };
+            const newRef = db.ref('users').push();
+            newUser.id = newRef.key;
+            newRef.set(newUser).then(() => {
+                currentUser = newUser;
+                localStorage.setItem('cesticaUser', JSON.stringify(newUser));
+                showNotification('🎉 Benvenuto nel mondo biancoverde!');
+                showMainApp();
+            });
         }
 
         function logout() {
-            localStorage.removeItem('cesticaCurrentUser');
+            currentUser = null;
+            localStorage.removeItem('cesticaUser');
             location.reload();
         }
 
@@ -869,657 +939,1202 @@
             setTimeout(() => el.classList.add('hidden'), 3000);
         }
 
-        // Extract only time from description (for video cards)
-        function extractTimeFromDescription(description) {
-            if (!description) return null;
+        function showMainApp() {
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('currentUser').textContent = currentUser.username;
+            document.getElementById('currentUserMobile').textContent = currentUser.username.charAt(0).toUpperCase();
             
-            // Look for time patterns
-            const timePatterns = [
-                /ore\s+(\d{1,2}[:.]\d{2})/i,
-                /h\.?\s*(\d{1,2}[:.]\d{2})/i,
-                /(\d{1,2}[:.]\d{2})\s*$/,
-                /\s(\d{1,2}[:.]\d{2})\s/
-            ];
-            
-            for (const pattern of timePatterns) {
-                const match = description.match(pattern);
-                if (match) {
-                    return '🕐 Ore ' + match[1].replace('.', ':');
-                }
+            if (currentUser.isAdmin) {
+                document.getElementById('adminBtn').classList.remove('hidden');
+                document.getElementById('mobileAdminBtn').classList.remove('hidden');
             }
             
-            return null;
+            loadVideos();
+            initHeroCarousel();
         }
 
-        // Extract date/time from video description
-        function extractDateTimeFromDescription(description) {
-            if (!description) return null;
+        // User Details
+        function showUserDetails() {
+            const avatarImg = document.getElementById('userAvatarImg');
+            const avatarInitial = document.getElementById('userAvatarInitial');
+            const removeBtn = document.getElementById('removePhotoBtn');
             
-            // Common patterns for date and time in Italian
-            // Pattern: "15 Gennaio 2024 ore 18:00" or "15/01/2024 18:00" or "Sabato 15 Gennaio ore 18:30"
-            const patterns = [
-                // "15 Gennaio 2024 ore 18:00" or "15 Gennaio ore 18:00"
-                /(\d{1,2}\s+\w+(?:\s+\d{4})?)\s+ore\s+(\d{1,2}[:.]\d{2})/i,
-                // "Sabato 15 Gennaio ore 18:00"
-                /(?:lunedì|martedì|mercoledì|giovedì|venerdì|sabato|domenica)\s+(\d{1,2}\s+\w+)\s+ore\s+(\d{1,2}[:.]\d{2})/i,
-                // "15/01/2024 18:00" or "15-01-2024 18:00"
-                /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})\s+(\d{1,2}[:.]\d{2})/i,
-                // Just date: "15 Gennaio 2024" or "15/01/2024"
-                /(\d{1,2}\s+(?:gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)(?:\s+\d{4})?)/i,
-                /(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/i,
-                // Just time: "ore 18:00" or "h 18:00"
-                /(?:ore|h\.?)\s*(\d{1,2}[:.]\d{2})/i
-            ];
-            
-            let date = '';
-            let time = '';
-            
-            // Try to find date and time
-            for (const pattern of patterns) {
-                const match = description.match(pattern);
-                if (match) {
-                    if (match[2]) {
-                        // Pattern with both date and time
-                        date = match[1].trim();
-                        time = match[2].replace('.', ':');
-                    } else {
-                        // Pattern with just date or time
-                        const val = match[1].trim();
-                        if (val.includes(':') || val.includes('.')) {
-                            time = val.replace('.', ':');
-                        } else {
-                            date = val;
-                        }
-                    }
-                    break;
-                }
+            if (currentUser.profilePhoto) {
+                avatarImg.src = currentUser.profilePhoto;
+                avatarImg.classList.remove('hidden');
+                avatarInitial.classList.add('hidden');
+                removeBtn.classList.remove('hidden');
+            } else {
+                avatarImg.classList.add('hidden');
+                avatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
+                avatarInitial.classList.remove('hidden');
+                removeBtn.classList.add('hidden');
             }
             
-            // Build result string
-            if (date && time) {
-                return `${date} - ${time}`;
-            } else if (date) {
-                return date;
-            } else if (time) {
-                return `Ore ${time}`;
-            }
+            const badge = getUserBadge(currentUser.points || 0);
+            document.getElementById('userBadge').innerHTML = `<span class="badge bg-green-600">${badge.emoji} ${badge.name}</span>`;
+            document.getElementById('userFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
+            document.getElementById('userUsername').textContent = currentUser.username;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userPoints').textContent = `${currentUser.points || 0} ⭐`;
+            document.getElementById('userDate').textContent = currentUser.date;
+            document.getElementById('userDetailsModal').classList.remove('hidden');
             
-            return null;
+            // Update Biancoverdi Card
+            updateCardDisplay();
         }
 
-        // YouTube helpers
+        function closeUserDetails() {
+            document.getElementById('userDetailsModal').classList.add('hidden');
+        }
+
+        function uploadProfilePhoto(event) {
+            const file = event.target.files[0];
+            if (!file || file.size > 500000) return showNotification('⚠️ Immagine troppo grande (max 500KB)');
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const size = Math.min(200, img.width, img.height);
+                    canvas.width = size;
+                    canvas.height = size;
+                    canvas.getContext('2d').drawImage(img, 0, 0, size, size);
+                    const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    currentUser.profilePhoto = dataUrl;
+                    db.ref('users/' + currentUser.id).update({ profilePhoto: dataUrl });
+                    localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                    showUserDetails();
+                    showNotification('📷 Foto aggiornata!');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeProfilePhoto() {
+            currentUser.profilePhoto = null;
+            db.ref('users/' + currentUser.id).update({ profilePhoto: null });
+            localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+            showUserDetails();
+        }
+
+        // Mobile Menu
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileMenuOverlay').classList.remove('hidden');
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileMenuOverlay').classList.add('hidden');
+        }
+
+        // YouTube Helpers
         function extractYouTubeId(url) {
-            if (!url) return '';
-            const patterns = [
-                /youtube\.com\/watch\?v=([^&]+)/,
-                /youtu\.be\/([^?]+)/,
-                /youtube\.com\/live\/([^?]+)/,
-                /youtube\.com\/shorts\/([^?]+)/,
-                /youtube\.com\/embed\/([^?]+)/
-            ];
-            for (const p of patterns) {
-                const m = url.match(p);
-                if (m) return m[1];
+            if (!url) return null;
+            const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/live\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
+            for (const pattern of patterns) {
+                const match = url.match(pattern);
+                if (match) return match[1];
             }
-            return '';
+            return null;
         }
 
-        // Videos
-        function loadVideos() {
-            const videos = getVideos();
+        function extractTimeFromDescription(desc) {
+            if (!desc) return null;
+            const match = desc.match(/ore\s*(\d{1,2}[:.]\d{2})/i) || desc.match(/(\d{1,2}[:.]\d{2})/);
+            return match ? '🕐 ' + match[1].replace('.', ':') : null;
+        }
+
+        function extractDateTimeFromDescription(desc) {
+            if (!desc) return null;
+            const dateMatch = desc.match(/(\d{1,2}\s+(?:gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre))/i);
+            const timeMatch = desc.match(/ore\s*(\d{1,2}[:.]\d{2})/i);
+            if (dateMatch && timeMatch) return `${dateMatch[1]} - ${timeMatch[1].replace('.', ':')}`;
+            if (dateMatch) return dateMatch[1];
+            if (timeMatch) return `Ore ${timeMatch[1].replace('.', ':')}`;
+            return null;
+        }
+
+        // Hero Carousel
+        function shuffleArray(array) {
+            const arr = [...array];
+            for (let i = arr.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [arr[i], arr[j]] = [arr[j], arr[i]];
+            }
+            return arr;
+        }
+
+        function initHeroCarousel() {
+            if (videosCache.length === 0) return;
+            heroVideos = shuffleArray(videosCache).slice(0, 5);
+            heroSlideIndex = 0;
             
-            ['live', 'replays', 'highlights', 'altro'].forEach(cat => {
-                const container = document.getElementById(cat + 'Videos');
-                const catVideos = videos.filter(v => v.category === cat);
-                
-                if (catVideos.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 py-8 text-sm">Nessun video in questa categoria</p>';
-                } else {
-                    container.innerHTML = catVideos.map(v => createVideoCard(v)).join('');
-                }
+            document.getElementById('carouselIndicators').innerHTML = heroVideos.map((_, i) => 
+                `<button onclick="goToHeroSlide(${i})" class="w-3 h-3 rounded-full ${i === 0 ? 'bg-green-500 w-8' : 'bg-white/50'} transition-all"></button>`
+            ).join('');
+            
+            updateHeroSlide();
+            if (heroInterval) clearInterval(heroInterval);
+            heroInterval = setInterval(() => {
+                heroSlideIndex = (heroSlideIndex + 1) % heroVideos.length;
+                updateHeroSlide();
+            }, 6000);
+        }
+
+        function updateHeroSlide() {
+            if (heroVideos.length === 0) return;
+            const video = heroVideos[heroSlideIndex];
+            const videoId = extractYouTubeId(video.url);
+            const thumb = video.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
+            
+            const bg = document.getElementById('heroBackground');
+            bg.style.opacity = '0';
+            setTimeout(() => {
+                bg.style.backgroundImage = `url('${thumb}')`;
+                bg.style.opacity = '1';
+            }, 300);
+            
+            const badge = document.getElementById('heroBadge');
+            if (video.category === 'live') {
+                badge.textContent = '🔴 LIVE';
+                badge.className = 'bg-red-600 px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block animate-pulse';
+            } else {
+                const labels = { replays: '🎬 Full Match', highlights: '⚡ Highlights', altro: '📺 Altro' };
+                badge.textContent = labels[video.category] || '🏀 Cestistica';
+                badge.className = 'bg-green-600 px-3 py-1 rounded-full text-sm font-medium mb-4 inline-block';
+            }
+            
+            document.getElementById('heroTitle').textContent = video.title;
+            document.getElementById('heroDesc').textContent = video.description || '';
+            
+            document.querySelectorAll('#carouselIndicators button').forEach((btn, i) => {
+                btn.className = `rounded-full transition-all ${i === heroSlideIndex ? 'bg-green-500 w-8 h-3' : 'bg-white/50 w-3 h-3'}`;
             });
         }
 
+        function nextHeroSlide() { heroSlideIndex = (heroSlideIndex + 1) % heroVideos.length; updateHeroSlide(); }
+        function prevHeroSlide() { heroSlideIndex = (heroSlideIndex - 1 + heroVideos.length) % heroVideos.length; updateHeroSlide(); }
+        function goToHeroSlide(i) { heroSlideIndex = i; updateHeroSlide(); }
+        function playHeroVideo() { if (heroVideos.length > 0) playVideo(heroVideos[heroSlideIndex].id); }
+        function addHeroToWatchlist() { if (heroVideos.length > 0) { toggleWatchlist(heroVideos[heroSlideIndex].id); showNotification('❤️ Aggiunto alla lista!'); } }
+
+        // Videos
+        function loadVideos() {
+            ['live', 'replays', 'highlights', 'altro'].forEach(category => {
+                const container = document.getElementById(category + 'Videos');
+                const videos = videosCache.filter(v => v.category === category);
+                container.innerHTML = videos.length === 0 ? '<p class="text-gray-500 py-4">Nessun video</p>' : videos.map(v => createVideoCard(v)).join('');
+            });
+            if (currentUser?.isAdmin) loadAdminVideoList();
+        }
+
         function createVideoCard(video) {
-            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
-            const userWatchlist = watchlist[currentUser?.username] || [];
-            const inWatchlist = userWatchlist.includes(video.id);
+            const videoId = extractYouTubeId(video.url);
+            const thumb = video.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
+            const isInWatchlist = getWatchlist().includes(video.id);
             
-            // Extract date/time from description for live videos
-            let liveBadge = '';
+            let badge = '';
             if (video.category === 'live') {
-                const dateTimeInfo = extractDateTimeFromDescription(video.description);
-                if (dateTimeInfo) {
-                    liveBadge = `<span class="absolute top-2 left-2 bg-green-600 px-2 py-1 rounded text-xs font-bold flex items-center gap-1">📅 ${dateTimeInfo}</span>`;
-                } else {
-                    liveBadge = '<span class="absolute top-2 left-2 bg-red-600 px-2 py-1 rounded text-xs font-bold animate-pulse">LIVE</span>';
-                }
+                const dateTime = extractDateTimeFromDescription(video.description);
+                badge = dateTime ? `<span class="absolute top-2 left-2 bg-green-600/90 text-white text-xs px-2 py-1 rounded font-medium">${dateTime}</span>` : '<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium animate-pulse">LIVE</span>';
             }
-            
+
+            const timeInfo = video.category === 'live' ? extractTimeFromDescription(video.description) : null;
+            const views = video.views || 0;
+            const likes = video.likes || 0;
+
             return `
-                <div class="video-card min-w-[160px] md:min-w-[280px] bg-gray-800 rounded-xl overflow-hidden cursor-pointer card-hover" onclick="playVideo('${video.id}')">
-                    <div class="relative">
-                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-[100px] md:h-40 object-cover">
-                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition">
-                            <svg class="w-12 md:w-16 h-12 md:h-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path></svg>
+                <div class="video-card min-w-[200px] md:min-w-[280px] bg-gray-800 rounded-xl overflow-hidden cursor-pointer flex-shrink-0" onclick="playVideo('${video.id}')">
+                    <div class="relative group">
+                        <img src="${thumb}" alt="${video.title}" class="w-full h-28 md:h-40 object-cover">
+                        <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
+                            <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
+                                <div class="w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-gray-900 border-b-[8px] border-b-transparent ml-1"></div>
+                            </div>
                         </div>
-                        ${liveBadge}
-                        <button onclick="event.stopPropagation(); quickToggleWatchlist('${video.id}')" class="absolute top-2 right-2 p-1.5 md:p-2 bg-black/60 rounded-full hover:bg-green-600 transition">
-                            <svg class="w-4 h-4 md:w-5 md:h-5 ${inWatchlist ? 'text-red-500 fill-current' : 'text-white'}" fill="${inWatchlist ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        ${badge}
+                        <button onclick="event.stopPropagation(); toggleWatchlist('${video.id}')" class="absolute top-2 right-2 w-8 h-8 rounded-full ${isInWatchlist ? 'bg-red-500 text-white' : 'bg-black/50 text-white'} flex items-center justify-center hover:scale-110 transition">
+                            <svg class="w-4 h-4" fill="${isInWatchlist ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                         </button>
                     </div>
-                    <div class="p-3 md:p-4">
-                        <h4 class="font-semibold truncate text-sm md:text-base">${video.title}</h4>
-                        <p class="text-xs md:text-sm text-gray-400 mt-1">${video.category === 'live' ? (extractTimeFromDescription(video.description) || video.date) : video.date}</p>
+                    <div class="p-4">
+                        <h4 class="font-semibold truncate">${video.title}</h4>
+                        <p class="text-sm text-gray-400 mt-1 flex items-center gap-3">
+                            <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> ${views}</span>
+                            <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg> ${likes}</span>
+                        </p>
                     </div>
                 </div>
             `;
         }
 
         function playVideo(id) {
-            const videos = getVideos();
-            const video = videos.find(v => v.id === id);
+            const video = videosCache.find(v => v.id === id);
             if (!video) return;
             
             currentVideo = video;
             const videoId = extractYouTubeId(video.url);
             
+            // Increment views
+            const newViews = (video.views || 0) + 1;
+            db.ref('videos/' + id).update({ views: newViews });
+            addPoints(5);
+            
             document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
             document.getElementById('videoTitle').textContent = video.title;
+            document.getElementById('videoViews').innerHTML = `<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> ${newViews} visualizzazioni`;
             document.getElementById('videoCategory').textContent = getCategoryLabel(video.category);
-            document.getElementById('videoDate').textContent = video.date;
-            document.getElementById('videoDescription').textContent = video.description;
+            document.getElementById('videoDate').textContent = video.date || '';
+            document.getElementById('videoDescription').textContent = video.description || '';
+            document.getElementById('likeCount').textContent = video.likes || 0;
             
-            updateWatchlistButton();
+            const userLiked = (video.likedBy || []).includes(currentUser.username);
+            const likeIcon = document.getElementById('likeIcon');
+            if (userLiked) {
+                likeIcon.setAttribute('fill', 'currentColor');
+                likeIcon.classList.add('text-green-400');
+            } else {
+                likeIcon.setAttribute('fill', 'none');
+                likeIcon.classList.remove('text-green-400');
+            }
+            
+            // Show/hide live chat
+            const chatSection = document.getElementById('liveChatSection');
+            if (video.category === 'live') {
+                chatSection.classList.remove('hidden');
+                loadLiveChat();
+            } else {
+                chatSection.classList.add('hidden');
+            }
+            
             loadComments();
-            loadRelatedVideos(video.category, id);
+            loadRelatedVideos(video.category, video.id);
             
-            document.getElementById('homeContent').classList.add('hidden');
-            document.getElementById('watchlistPage').classList.add('hidden');
-            document.getElementById('adminPage').classList.add('hidden');
+            hideAllPages();
             document.getElementById('videoPage').classList.remove('hidden');
             window.scrollTo(0, 0);
         }
 
-        // Shuffle array function
-        function shuffleArray(array) {
-            const shuffled = [...array];
-            for (let i = shuffled.length - 1; i > 0; i--) {
-                const j = Math.floor(Math.random() * (i + 1));
-                [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-            }
-            return shuffled;
-        }
-
-        // Hero Carousel Functions
-        function initHeroCarousel() {
-            const videos = getVideos();
-            if (videos.length === 0) return;
-            
-            // Shuffle all videos and pick up to 5 random ones
-            const shuffledVideos = shuffleArray(videos);
-            heroVideos = shuffledVideos.slice(0, Math.min(5, shuffledVideos.length));
-            
-            // Reset slide index to start fresh
-            heroSlideIndex = 0;
-            
-            if (heroVideos.length === 0) return;
-            
-            // Create indicators
-            const indicatorsContainer = document.getElementById('carouselIndicators');
-            indicatorsContainer.innerHTML = heroVideos.map((_, i) => `
-                <button onclick="goToHeroSlide(${i})" class="carousel-dot w-2 h-2 md:w-3 md:h-3 rounded-full transition-all ${i === 0 ? 'bg-green-500 w-6 md:w-8' : 'bg-white/50 hover:bg-white/80'}"></button>
-            `).join('');
-            
-            // Show first slide
-            updateHeroSlide();
-            
-            // Auto-rotate every 6 seconds
-            if (heroInterval) clearInterval(heroInterval);
-            heroInterval = setInterval(() => {
-                heroSlideIndex = (heroSlideIndex + 1) % heroVideos.length;
-                updateHeroSlide();
-            }, 6000);
-        }
-        
-        function updateHeroSlide() {
-            if (heroVideos.length === 0) return;
-            
-            const video = heroVideos[heroSlideIndex];
-            const videoId = extractYouTubeId(video.url);
-            const thumbnail = video.thumbnail || `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-            
-            // Update background with fade effect
-            const heroBg = document.getElementById('heroBackground');
-            heroBg.style.opacity = '0';
-            setTimeout(() => {
-                heroBg.style.backgroundImage = `url('${thumbnail}')`;
-                heroBg.style.opacity = '1';
-            }, 300);
-            
-            // Update content
-            const categoryLabels = {
-                live: '🔴 LIVE NOW',
-                replays: '🎬 Full Match',
-                highlights: '⚡ Highlights',
-                altro: '📺 Altro'
-            };
-            
-            document.getElementById('heroBadge').textContent = categoryLabels[video.category] || '🏀 Cestistica';
-            document.getElementById('heroBadge').className = `px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium mb-3 md:mb-4 inline-block ${video.category === 'live' ? 'bg-red-600 animate-pulse' : 'bg-green-600'}`;
-            document.getElementById('heroTitle').textContent = video.title;
-            document.getElementById('heroDesc').textContent = video.description || 'Guarda questo contenuto esclusivo della Cestistica Savonese!';
-            
-            // Update indicators
-            document.querySelectorAll('.carousel-dot').forEach((dot, i) => {
-                if (i === heroSlideIndex) {
-                    dot.className = 'carousel-dot w-6 md:w-8 h-2 md:h-3 rounded-full bg-green-500 transition-all';
-                } else {
-                    dot.className = 'carousel-dot w-2 h-2 md:w-3 md:h-3 rounded-full bg-white/50 hover:bg-white/80 transition-all';
-                }
-            });
-        }
-        
-        function nextHeroSlide() {
-            heroSlideIndex = (heroSlideIndex + 1) % heroVideos.length;
-            updateHeroSlide();
-            resetHeroInterval();
-        }
-        
-        function prevHeroSlide() {
-            heroSlideIndex = (heroSlideIndex - 1 + heroVideos.length) % heroVideos.length;
-            updateHeroSlide();
-            resetHeroInterval();
-        }
-        
-        function goToHeroSlide(index) {
-            heroSlideIndex = index;
-            updateHeroSlide();
-            resetHeroInterval();
-        }
-        
-        function resetHeroInterval() {
-            if (heroInterval) clearInterval(heroInterval);
-            heroInterval = setInterval(() => {
-                heroSlideIndex = (heroSlideIndex + 1) % heroVideos.length;
-                updateHeroSlide();
-            }, 6000);
-        }
-        
-        function playHeroVideo() {
-            if (heroVideos.length > 0 && heroVideos[heroSlideIndex]) {
-                playVideo(heroVideos[heroSlideIndex].id);
-            }
-        }
-        
-        function addHeroToWatchlist() {
-            if (heroVideos.length > 0 && heroVideos[heroSlideIndex]) {
-                quickToggleWatchlist(heroVideos[heroSlideIndex].id);
-                showNotification('❤️ Aggiunto alla tua lista!');
-            }
-        }
-
-        function playFeatured() {
-            const videos = getVideos();
-            if (videos.length > 0) playVideo(videos[0].id);
-        }
-
         function getCategoryLabel(cat) {
-            return { live: '🔴 Live', replays: '🎬 Full Match Replay', highlights: '⚡ Highlights', altro: '📺 Altro' }[cat] || cat;
+            const labels = { live: '🔴 Live', replays: '🎬 Full Match Replays', highlights: '⚡ Highlights', altro: '📺 Altro' };
+            return labels[cat] || cat;
         }
 
         function loadRelatedVideos(category, currentId) {
-            const videos = getVideos();
-            const related = videos.filter(v => v.category === category && v.id !== currentId).slice(0, 5);
+            const related = videosCache.filter(v => v.category === category && v.id !== currentId).slice(0, 5);
+            document.getElementById('relatedVideos').innerHTML = related.map(v => {
+                const videoId = extractYouTubeId(v.url);
+                const thumb = v.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : '');
+                return `<div class="flex gap-3 cursor-pointer hover:bg-gray-800 rounded-lg p-2 transition" onclick="playVideo('${v.id}')">
+                    <img src="${thumb}" class="w-32 h-20 object-cover rounded-lg">
+                    <div class="flex-1 min-w-0"><h4 class="font-medium text-sm line-clamp-2">${v.title}</h4><p class="text-xs text-gray-400 mt-1">👁️ ${v.views || 0}</p></div>
+                </div>`;
+            }).join('');
+        }
+
+        // Likes
+        function toggleLike() {
+            if (!currentVideo) return;
+            let likedBy = currentVideo.likedBy || [];
+            let likes = currentVideo.likes || 0;
             
-            document.getElementById('relatedVideos').innerHTML = related.map(v => `
-                <div class="flex gap-3 bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:bg-gray-700 transition" onclick="playVideo('${v.id}')">
-                    <img src="${v.thumbnail}" alt="${v.title}" class="w-24 md:w-32 h-16 md:h-20 object-cover">
-                    <div class="py-2 pr-2">
-                        <h4 class="font-medium text-xs md:text-sm line-clamp-2">${v.title}</h4>
-                        <p class="text-xs text-gray-400 mt-1">${v.date}</p>
-                    </div>
-                </div>
-            `).join('');
+            if (likedBy.includes(currentUser.username)) {
+                likedBy = likedBy.filter(u => u !== currentUser.username);
+                likes--;
+            } else {
+                likedBy.push(currentUser.username);
+                likes++;
+                addPoints(2);
+            }
+            
+            db.ref('videos/' + currentVideo.id).update({ likes, likedBy });
+            document.getElementById('likeCount').textContent = likes;
+            const likeIcon = document.getElementById('likeIcon');
+            if (likedBy.includes(currentUser.username)) {
+                likeIcon.setAttribute('fill', 'currentColor');
+                likeIcon.classList.add('text-green-400');
+            } else {
+                likeIcon.setAttribute('fill', 'none');
+                likeIcon.classList.remove('text-green-400');
+            }
+        }
+
+        // Share
+        function openShareModal() { document.getElementById('shareModal').classList.remove('hidden'); }
+        function closeShareModal() { document.getElementById('shareModal').classList.add('hidden'); }
+        function shareWhatsApp() { window.open(`https://wa.me/?text=${encodeURIComponent(currentVideo.title + ' - Cestistica TV: ' + location.href)}`); }
+        function shareFacebook() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`); }
+        function shareTwitter() { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(currentVideo.title)}&url=${encodeURIComponent(location.href)}`); }
+        function copyLink() { navigator.clipboard.writeText(location.href); showNotification('🔗 Link copiato!'); closeShareModal(); }
+
+        // Live Chat
+        function loadLiveChat() {
+            if (!currentVideo) return;
+            db.ref('liveChat/' + currentVideo.id).orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+                const container = document.getElementById('liveChatMessages');
+                container.innerHTML = '';
+                snapshot.forEach((child) => {
+                    const msg = child.val();
+                    container.innerHTML += `<div class="flex gap-2 text-sm"><span class="text-green-400 font-medium">${msg.username}:</span><span class="text-gray-300">${msg.text}</span></div>`;
+                });
+                container.scrollTop = container.scrollHeight;
+            });
+        }
+
+        function sendLiveChat() {
+            const input = document.getElementById('liveChatInput');
+            const text = input.value.trim();
+            if (!text || !currentVideo) return;
+            
+            db.ref('liveChat/' + currentVideo.id).push({
+                username: currentUser.username,
+                text: text,
+                timestamp: Date.now()
+            });
+            input.value = '';
+            addPoints(2);
         }
 
         // Comments
         function loadComments() {
-            const videos = getVideos();
-            const video = videos.find(v => v.id === currentVideo.id);
-            const comments = video?.comments || [];
-            const users = getUsers();
-            
-            if (comments.length === 0) {
-                document.getElementById('commentsList').innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">Nessun commento ancora. Sii il primo!</p>';
+            const container = document.getElementById('commentsList');
+            const comments = currentVideo.comments || [];
+            container.innerHTML = comments.length === 0 ? '<p class="text-gray-500 text-center py-4">Nessun commento</p>' : comments.map(c => {
+                const user = usersCache.find(u => u.username === c.username);
+                const photo = user?.profilePhoto;
+                return `<div class="flex gap-3">
+                    <div class="w-10 h-10 bg-green-600 rounded-full flex-shrink-0 flex items-center justify-center overflow-hidden">
+                        ${photo ? `<img src="${photo}" class="w-full h-full object-cover">` : `<span class="font-bold">${c.username.charAt(0).toUpperCase()}</span>`}
+                    </div>
+                    <div class="flex-1"><div class="flex items-center gap-2"><span class="font-semibold">${c.username}</span><span class="text-xs text-gray-500">${c.date}</span></div><p class="text-gray-300 mt-1">${c.text}</p></div>
+                </div>`;
+            }).join('');
+        }
+
+        function addComment() {
+            const input = document.getElementById('commentInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            if (!currentVideo.comments) currentVideo.comments = [];
+            currentVideo.comments.push({ username: currentUser.username, text, date: new Date().toLocaleDateString('it-IT') });
+            db.ref('videos/' + currentVideo.id).update({ comments: currentVideo.comments });
+            input.value = '';
+            loadComments();
+            addPoints(10);
+            showNotification('💬 Commento aggiunto!');
+        }
+
+        // Watchlist
+        function getWatchlist() { return JSON.parse(localStorage.getItem('cesticaWatchlist_' + currentUser.username) || '[]'); }
+        function toggleWatchlist(videoId) {
+            let watchlist = getWatchlist();
+            if (watchlist.includes(videoId)) {
+                watchlist = watchlist.filter(id => id !== videoId);
+                showNotification('💔 Rimosso dalla lista');
             } else {
-                document.getElementById('commentsList').innerHTML = comments.map(c => {
-                    // Find the user to get their profile photo
-                    const commentUser = users.find(u => u.username === c.user);
-                    const avatarContent = commentUser && commentUser.profilePhoto 
-                        ? `<img src="${commentUser.profilePhoto}" alt="${c.user}" class="w-full h-full object-cover">`
-                        : c.user.charAt(0).toUpperCase();
-                    
-                    return `
-                        <div class="bg-gray-700 rounded-lg p-3 md:p-4">
-                            <div class="flex items-center gap-2 mb-2">
-                                <div class="w-7 h-7 md:w-8 md:h-8 bg-green-600 rounded-full flex items-center justify-center font-bold text-sm overflow-hidden">${avatarContent}</div>
-                                <span class="font-medium text-sm">${c.user}</span>
-                                <span class="text-gray-400 text-xs">${c.date}</span>
-                            </div>
-                            <p class="text-gray-300 text-sm">${c.text}</p>
-                        </div>
-                    `;
+                watchlist.push(videoId);
+                showNotification('❤️ Aggiunto alla lista!');
+            }
+            localStorage.setItem('cesticaWatchlist_' + currentUser.username, JSON.stringify(watchlist));
+            loadVideos();
+        }
+
+        function showWatchlist() {
+            const watchlist = getWatchlist();
+            const videos = videosCache.filter(v => watchlist.includes(v.id));
+            hideAllPages();
+            document.getElementById('watchlistPage').classList.remove('hidden');
+            const container = document.getElementById('watchlistVideos');
+            const emptyMsg = document.getElementById('emptyWatchlist');
+            if (videos.length === 0) { container.innerHTML = ''; emptyMsg.classList.remove('hidden'); }
+            else { emptyMsg.classList.add('hidden'); container.innerHTML = videos.map(v => createVideoCard(v)).join(''); }
+        }
+
+        // News
+        function showNews() {
+            hideAllPages();
+            document.getElementById('newsPage').classList.remove('hidden');
+            const container = document.getElementById('newsList');
+            const emptyMsg = document.getElementById('emptyNews');
+            
+            if (newsCache.length === 0) { container.innerHTML = ''; emptyMsg.classList.remove('hidden'); }
+            else {
+                emptyMsg.classList.add('hidden');
+                container.innerHTML = newsCache.map(n => {
+                    const firstImage = (n.images && n.images[0]) || 'https://placehold.co/400x200/1a1a1a/228B22?text=News';
+                    return `<div class="news-card bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-green-500 transition" onclick="showNewsArticle('${n.id}')">
+                        <img src="${firstImage}" class="w-full h-48 object-cover">
+                        <div class="p-4"><h3 class="font-bold text-lg line-clamp-2">${n.title}</h3><p class="text-gray-400 text-sm mt-2">${n.date}</p></div>
+                    </div>`;
                 }).join('');
             }
         }
 
-        function addComment() {
-            const text = document.getElementById('commentInput').value.trim();
-            if (!text) return;
+        function showNewsArticle(id) {
+            const news = newsCache.find(n => n.id === id);
+            if (!news) return;
             
-            const videos = getVideos();
-            const video = videos.find(v => v.id === currentVideo.id);
-            if (!video.comments) video.comments = [];
+            hideAllPages();
+            document.getElementById('newsArticlePage').classList.remove('hidden');
             
-            video.comments.unshift({
-                user: currentUser.username,
-                text: text,
-                date: new Date().toLocaleString('it-IT'),
-                userPhoto: currentUser.profilePhoto || null
+            let imagesHtml = '';
+            if (news.images && news.images.length > 0) {
+                imagesHtml = `<div class="grid ${news.images.length > 1 ? 'grid-cols-2' : ''} gap-4 my-6">${news.images.map(img => `<img src="${img}" class="rounded-lg w-full">`).join('')}</div>`;
+            }
+            
+            let videoHtml = '';
+            if (news.video) {
+                const videoId = extractYouTubeId(news.video);
+                if (videoId) videoHtml = `<div class="aspect-video my-6"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full rounded-xl" frameborder="0" allowfullscreen></iframe></div>`;
+            }
+            
+            document.getElementById('newsArticleContent').innerHTML = `
+                <h1 class="text-3xl font-bold mb-4">${news.title}</h1>
+                <p class="text-gray-400 mb-6">${news.date}</p>
+                ${imagesHtml}
+                ${videoHtml}
+                <div class="prose prose-invert max-w-none text-gray-300 leading-relaxed">${news.content.replace(/\n/g, '<br>')}</div>
+            `;
+            window.scrollTo(0, 0);
+        }
+
+        function addNews() {
+            const title = document.getElementById('newNewsTitle').value.trim();
+            const content = document.getElementById('newNewsContent').value.trim();
+            const video = document.getElementById('newNewsVideo').value.trim();
+            const imageFiles = document.getElementById('newNewsImages').files;
+            
+            if (!title || !content) return showNotification('⚠️ Inserisci titolo e contenuto');
+            
+            const processImages = async () => {
+                const images = [];
+                for (let i = 0; i < Math.min(imageFiles.length, 5); i++) {
+                    const reader = new FileReader();
+                    const result = await new Promise(resolve => {
+                        reader.onload = e => resolve(e.target.result);
+                        reader.readAsDataURL(imageFiles[i]);
+                    });
+                    images.push(result);
+                }
+                return images;
+            };
+            
+            processImages().then(images => {
+                const newNews = { title, content, video, images, date: new Date().toLocaleDateString('it-IT') };
+                const newRef = db.ref('news').push();
+                newNews.id = newRef.key;
+                newRef.set(newNews);
+                document.getElementById('newNewsTitle').value = '';
+                document.getElementById('newNewsContent').value = '';
+                document.getElementById('newNewsVideo').value = '';
+                document.getElementById('newNewsImages').value = '';
+                showNotification('✅ News pubblicata!');
+                loadAdminNewsList();
+            });
+        }
+
+        function loadAdminNewsList() {
+            const container = document.getElementById('adminNewsList');
+            if (!container) return;
+            container.innerHTML = newsCache.length === 0 ? '<p class="text-gray-500">Nessuna news</p>' : newsCache.map(n => `
+                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="flex-1 min-w-0"><p class="font-medium truncate">${n.title}</p><p class="text-sm text-gray-400">${n.date}</p></div>
+                    <button onclick="deleteNews('${n.id}')" class="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function deleteNews(id) {
+            if (!confirm('Eliminare questa news?')) return;
+            db.ref('news/' + id).remove();
+            showNotification('🗑️ News eliminata');
+        }
+
+        // Calendar
+        function showCalendar() {
+            hideAllPages();
+            document.getElementById('calendarPage').classList.remove('hidden');
+            loadCalendarPdf();
+        }
+
+        function loadCalendarPdf() {
+            db.ref('settings/calendar').once('value', (snapshot) => {
+                const pdfData = snapshot.val();
+                if (pdfData) {
+                    document.getElementById('noCalendar').classList.add('hidden');
+                    document.getElementById('pdfCanvas').classList.remove('hidden');
+                    document.getElementById('pdfControls').classList.remove('hidden');
+                    renderPdf(pdfData);
+                } else {
+                    document.getElementById('noCalendar').classList.remove('hidden');
+                    document.getElementById('pdfCanvas').classList.add('hidden');
+                    document.getElementById('pdfControls').classList.add('hidden');
+                }
+            });
+        }
+
+        async function renderPdf(pdfData) {
+            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+            pdfDoc = await pdfjsLib.getDocument({ data: atob(pdfData.split(',')[1]) }).promise;
+            pdfPage = 1;
+            renderPdfPage();
+        }
+
+        async function renderPdfPage() {
+            const page = await pdfDoc.getPage(pdfPage);
+            const canvas = document.getElementById('pdfCanvas');
+            const ctx = canvas.getContext('2d');
+            const viewport = page.getViewport({ scale: 1.5 });
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
+            document.getElementById('pdfPageInfo').textContent = `Pagina ${pdfPage} di ${pdfDoc.numPages}`;
+        }
+
+        function prevPdfPage() { if (pdfPage > 1) { pdfPage--; renderPdfPage(); } }
+        function nextPdfPage() { if (pdfDoc && pdfPage < pdfDoc.numPages) { pdfPage++; renderPdfPage(); } }
+
+        function uploadCalendar(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => {
+                db.ref('settings/calendar').set(e.target.result);
+                showNotification('✅ Calendario caricato!');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeCalendar() {
+            db.ref('settings/calendar').remove();
+            showNotification('🗑️ Calendario rimosso');
+        }
+
+        // Pronostici
+        function showPronostici() {
+            hideAllPages();
+            document.getElementById('pronosticiPage').classList.remove('hidden');
+            loadPronosticiList();
+        }
+
+        function loadPronosticiList() {
+            const container = document.getElementById('pronosticiList');
+            const emptyMsg = document.getElementById('emptyPronostici');
+            
+            const activePronostici = pronosticiCache.filter(p => !p.result);
+            if (activePronostici.length === 0) { container.innerHTML = ''; emptyMsg.classList.remove('hidden'); return; }
+            
+            emptyMsg.classList.add('hidden');
+            container.innerHTML = activePronostici.map(p => {
+                const userVote = (p.votes || {})[currentUser.username];
+                const votes1 = Object.values(p.votes || {}).filter(v => v === 'team1').length;
+                const votes2 = Object.values(p.votes || {}).filter(v => v === 'team2').length;
+                
+                return `<div class="bg-gray-800 rounded-xl p-6">
+                    <p class="text-gray-400 text-sm mb-4">📅 ${p.date}</p>
+                    <div class="flex items-center justify-between gap-4">
+                        <button onclick="votePronostico('${p.id}', 'team1')" class="flex-1 p-4 rounded-xl text-center transition ${userVote === 'team1' ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}">
+                            <p class="font-bold text-lg">${p.team1}</p>
+                            <p class="text-2xl mt-2">${votes1}</p>
+                        </button>
+                        <span class="text-2xl font-bold text-gray-500">VS</span>
+                        <button onclick="votePronostico('${p.id}', 'team2')" class="flex-1 p-4 rounded-xl text-center transition ${userVote === 'team2' ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}">
+                            <p class="font-bold text-lg">${p.team2}</p>
+                            <p class="text-2xl mt-2">${votes2}</p>
+                        </button>
+                    </div>
+                </div>`;
+            }).join('');
+        }
+
+        function votePronostico(id, vote) {
+            const prono = pronosticiCache.find(p => p.id === id);
+            if (!prono || prono.result) return;
+            
+            const currentVote = (prono.votes || {})[currentUser.username];
+            if (currentVote === vote) return;
+            
+            db.ref(`pronostici/${id}/votes/${currentUser.username}`).set(vote);
+            if (!currentVote) addPoints(5);
+            showNotification('🎯 Voto registrato!');
+        }
+
+        function addPronostico() {
+            const team1 = document.getElementById('pronoTeam1').value.trim();
+            const team2 = document.getElementById('pronoTeam2').value.trim();
+            const date = document.getElementById('pronoDate').value;
+            
+            if (!team1 || !team2 || !date) return showNotification('⚠️ Compila tutti i campi');
+            
+            const newProno = { team1, team2, date: new Date(date).toLocaleString('it-IT'), votes: {} };
+            const newRef = db.ref('pronostici').push();
+            newProno.id = newRef.key;
+            newRef.set(newProno);
+            
+            document.getElementById('pronoTeam1').value = '';
+            document.getElementById('pronoTeam2').value = '';
+            document.getElementById('pronoDate').value = '';
+            showNotification('✅ Pronostico creato!');
+            loadAdminPronosticiList();
+        }
+
+        function loadAdminPronosticiList() {
+            const container = document.getElementById('adminPronosticiList');
+            if (!container) return;
+            container.innerHTML = pronosticiCache.length === 0 ? '<p class="text-gray-500">Nessun pronostico</p>' : pronosticiCache.map(p => `
+                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="flex-1"><p class="font-medium">${p.team1} vs ${p.team2}</p><p class="text-sm text-gray-400">${p.date}</p></div>
+                    ${!p.result ? `
+                        <button onclick="setPronoResult('${p.id}', 'team1')" class="bg-green-600 px-2 py-1 rounded text-xs">1</button>
+                        <button onclick="setPronoResult('${p.id}', 'team2')" class="bg-blue-600 px-2 py-1 rounded text-xs">2</button>
+                    ` : `<span class="text-green-400">${p.result === 'team1' ? p.team1 : p.team2} vince</span>`}
+                    <button onclick="deletePronostico('${p.id}')" class="bg-red-600 px-2 py-1 rounded text-xs">🗑️</button>
+                </div>
+            `).join('');
+        }
+
+        function setPronoResult(id, result) {
+            const prono = pronosticiCache.find(p => p.id === id);
+            if (!prono) return;
+            
+            db.ref(`pronostici/${id}`).update({ result });
+            
+            // Award points to winners
+            Object.entries(prono.votes || {}).forEach(([username, vote]) => {
+                if (vote === result) {
+                    const user = usersCache.find(u => u.username === username);
+                    if (user) db.ref('users/' + user.id).update({ points: (user.points || 0) + 50 });
+                }
             });
             
-            saveVideo(video);
-            document.getElementById('commentInput').value = '';
-            showNotification('💬 Commento aggiunto!');
+            showNotification('✅ Risultato registrato!');
         }
 
-        // Watchlist (stays local per user)
-        function toggleWatchlist() {
-            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
-            if (!watchlist[currentUser.username]) watchlist[currentUser.username] = [];
-            
-            const idx = watchlist[currentUser.username].indexOf(currentVideo.id);
-            if (idx > -1) watchlist[currentUser.username].splice(idx, 1);
-            else watchlist[currentUser.username].push(currentVideo.id);
-            
-            localStorage.setItem('cesticaWatchlist', JSON.stringify(watchlist));
-            updateWatchlistButton();
+        function deletePronostico(id) {
+            if (!confirm('Eliminare?')) return;
+            db.ref('pronostici/' + id).remove();
         }
 
-        function quickToggleWatchlist(videoId) {
-            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
-            if (!watchlist[currentUser.username]) watchlist[currentUser.username] = [];
+        // Classifica Tifosi
+        function showClassifica() {
+            hideAllPages();
+            document.getElementById('classificaPage').classList.remove('hidden');
             
-            const idx = watchlist[currentUser.username].indexOf(videoId);
-            if (idx > -1) watchlist[currentUser.username].splice(idx, 1);
-            else watchlist[currentUser.username].push(videoId);
-            
-            localStorage.setItem('cesticaWatchlist', JSON.stringify(watchlist));
-            loadVideos();
+            const sorted = [...usersCache].filter(u => !u.isAdmin).sort((a, b) => (b.points || 0) - (a.points || 0));
+            document.getElementById('classificaList').innerHTML = sorted.map((u, i) => {
+                const badge = getUserBadge(u.points || 0);
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
+                return `<div class="flex items-center gap-4 bg-gray-800 rounded-xl p-4">
+                    <span class="text-2xl font-bold w-12 text-center">${medal}</span>
+                    <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
+                        ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold">${u.username.charAt(0).toUpperCase()}</span>`}
+                    </div>
+                    <div class="flex-1">
+                        <p class="font-semibold">${u.nome} ${u.cognome}</p>
+                        <span class="badge bg-green-600">${badge.emoji} ${badge.name}</span>
+                    </div>
+                    <p class="text-xl font-bold text-yellow-400">${u.points || 0} 💚</p>
+                </div>`;
+            }).join('');
         }
 
-        function updateWatchlistButton() {
-            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
-            const userWatchlist = watchlist[currentUser.username] || [];
-            const inWatchlist = userWatchlist.includes(currentVideo.id);
+        // Search
+        function searchVideos() {
+            const query = document.getElementById('searchInput').value.toLowerCase().trim();
+            if (!query) { loadVideos(); return; }
             
-            document.getElementById('watchlistIcon').setAttribute('fill', inWatchlist ? 'currentColor' : 'none');
-            document.getElementById('watchlistIcon').classList.toggle('text-red-500', inWatchlist);
-            document.getElementById('watchlistText').textContent = inWatchlist ? 'Nella Mia Lista' : 'Aggiungi alla Lista';
+            const filtered = videosCache.filter(v => v.title.toLowerCase().includes(query) || (v.description && v.description.toLowerCase().includes(query)));
+            ['live', 'replays', 'highlights', 'altro'].forEach(category => {
+                const container = document.getElementById(category + 'Videos');
+                const videos = filtered.filter(v => v.category === category);
+                container.innerHTML = videos.length === 0 ? '<p class="text-gray-500 py-4">Nessun risultato</p>' : videos.map(v => createVideoCard(v)).join('');
+            });
         }
 
-        function showWatchlist() {
-            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
-            const userWatchlist = watchlist[currentUser.username] || [];
-            const videos = getVideos();
-            const watchlistVideos = videos.filter(v => userWatchlist.includes(v.id));
+        // Biancoverdi Card Page
+        function showBiancoverdiCard() {
+            hideAllPages();
+            document.getElementById('biancoverdiCardPage').classList.remove('hidden');
+            updateCardPageDisplay();
+        }
+
+        function updateCardPageDisplay() {
+            const badge = getUserBadge(currentUser.points || 0);
             
-            document.getElementById('homeContent').classList.add('hidden');
-            document.getElementById('videoPage').classList.add('hidden');
-            document.getElementById('adminPage').classList.add('hidden');
-            document.getElementById('watchlistPage').classList.remove('hidden');
-            
-            if (watchlistVideos.length === 0) {
-                document.getElementById('watchlistVideos').innerHTML = '';
-                document.getElementById('emptyWatchlist').classList.remove('hidden');
+            // Card avatar
+            const cardAvatarImg = document.getElementById('cardAvatarImgPage');
+            const cardAvatarInitial = document.getElementById('cardAvatarInitialPage');
+            if (currentUser.profilePhoto) {
+                cardAvatarImg.src = currentUser.profilePhoto;
+                cardAvatarImg.classList.remove('hidden');
+                cardAvatarInitial.classList.add('hidden');
             } else {
-                document.getElementById('emptyWatchlist').classList.add('hidden');
-                document.getElementById('watchlistVideos').innerHTML = watchlistVideos.map(v => createVideoCard(v)).join('');
+                cardAvatarImg.classList.add('hidden');
+                cardAvatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
+                cardAvatarInitial.classList.remove('hidden');
             }
+            
+            // Card logo
+            const headerLogo = document.getElementById('headerLogo');
+            const cardLogo = document.getElementById('cardLogoPage');
+            const cardLogoEmoji = document.getElementById('cardLogoEmojiPage');
+            if (headerLogo && !headerLogo.classList.contains('hidden')) {
+                cardLogo.src = headerLogo.src;
+                cardLogo.classList.remove('hidden');
+                cardLogoEmoji.classList.add('hidden');
+            }
+            
+            const cardNumber = generateCardNumber(currentUser.id);
+            
+            document.getElementById('cardFullNamePage').textContent = `${currentUser.nome} ${currentUser.cognome}`;
+            document.getElementById('cardUsernamePage').textContent = `@${currentUser.username}`;
+            document.getElementById('cardNumberPage').textContent = cardNumber;
+            document.getElementById('cardBadgePage').textContent = `${badge.emoji} ${badge.name}`;
+            document.getElementById('cardDatePage').textContent = `Membro dal ${currentUser.date}`;
+            
+            // Info section
+            document.getElementById('infoFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
+            document.getElementById('infoUsername').textContent = `@${currentUser.username}`;
+            document.getElementById('infoCardNumber').textContent = cardNumber;
+            document.getElementById('infoBadge').innerHTML = `<span class="badge bg-green-600">${badge.emoji} ${badge.name}</span>`;
+            document.getElementById('infoPoints').textContent = `${currentUser.points || 0} 💚`;
+            document.getElementById('infoDate').textContent = currentUser.date;
+            
+            // QR Code
+            const qrData = `cesticatv://member/${currentUser.id}`;
+            document.getElementById('cardQRPage').innerHTML = `<img src="${generateQRCode(qrData)}" class="w-full h-full rounded">`;
+        }
+
+        function downloadCardPage() {
+            showNotification('📥 Preparazione download...');
+            
+            const canvas = document.createElement('canvas');
+            const width = 400;
+            const height = 250;
+            canvas.width = width * 2;
+            canvas.height = height * 2;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(2, 2);
+            
+            // Background gradient
+            const gradient = ctx.createLinearGradient(0, 0, width, height);
+            gradient.addColorStop(0, '#1a1a1a');
+            gradient.addColorStop(0.5, '#111');
+            gradient.addColorStop(1, '#000');
+            ctx.fillStyle = gradient;
+            ctx.roundRect(0, 0, width, height, 16);
+            ctx.fill();
+            
+            // Green border
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 3;
+            ctx.roundRect(0, 0, width, height, 16);
+            ctx.stroke();
+            
+            // Header
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 12px Poppins, sans-serif';
+            ctx.textAlign = 'right';
+            ctx.fillText('CESTISTICA TV+', width - 20, 30);
+            
+            ctx.font = '28px sans-serif';
+            ctx.textAlign = 'left';
+            ctx.fillText('🏀', 20, 35);
+            
+            // Name
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 22px Poppins, sans-serif';
+            ctx.fillText(`${currentUser.nome} ${currentUser.cognome}`, 85, 80);
+            
+            // Username
+            ctx.fillStyle = '#22c55e';
+            ctx.font = '14px Poppins, sans-serif';
+            ctx.fillText(`@${currentUser.username}`, 85, 100);
+            
+            // Card number
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Poppins, sans-serif';
+            ctx.fillText('N° TESSERA', 20, 140);
+            
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 14px monospace';
+            ctx.fillText(generateCardNumber(currentUser.id), 20, 158);
+            
+            // Badge
+            const badge = getUserBadge(currentUser.points || 0);
+            ctx.fillStyle = '#22c55e';
+            ctx.font = '12px Poppins, sans-serif';
+            ctx.fillText(`${badge.emoji} ${badge.name}`, 20, 185);
+            
+            // Points
+            ctx.fillStyle = '#fbbf24';
+            ctx.font = 'bold 14px Poppins, sans-serif';
+            ctx.fillText(`${currentUser.points || 0} Biancoverdi Points`, 20, 210);
+            
+            // Date
+            ctx.fillStyle = '#666';
+            ctx.font = '10px Poppins, sans-serif';
+            ctx.fillText(`Membro dal ${currentUser.date}`, 20, 235);
+            
+            // QR placeholder (simplified)
+            ctx.fillStyle = 'white';
+            ctx.fillRect(width - 90, height - 100, 70, 70);
+            const qrImg = new Image();
+            qrImg.onload = function() {
+                ctx.drawImage(qrImg, width - 88, height - 98, 66, 66);
+                
+                // Download
+                const link = document.createElement('a');
+                link.download = `biancoverdi-card-${currentUser.username}.png`;
+                link.href = canvas.toDataURL('image/png');
+                link.click();
+                showNotification('✅ Card scaricata!');
+            };
+            qrImg.src = generateQRCode(`cesticatv://member/${currentUser.id}`);
+        }
+
+        function addToGoogleWallet() {
+            // Google Wallet requires a backend to generate passes
+            // This is a simulation that shows the concept
+            const passData = {
+                type: 'loyalty',
+                member: `${currentUser.nome} ${currentUser.cognome}`,
+                cardNumber: generateCardNumber(currentUser.id),
+                points: currentUser.points || 0
+            };
+            
+            showNotification('🔜 Google Wallet in arrivo! Funzionalità in sviluppo');
+            
+            // In production, you would redirect to:
+            // window.open(`https://pay.google.com/gp/v/save/${jwtToken}`, '_blank');
+        }
+
+        function addToAppleWallet() {
+            // Apple Wallet requires a backend to generate .pkpass files
+            // This is a simulation that shows the concept
+            showNotification('🔜 Apple Wallet in arrivo! Funzionalità in sviluppo');
+            
+            // In production, you would:
+            // window.location.href = `${backendUrl}/api/wallet/apple/${currentUser.id}`;
         }
 
         // Navigation
-        function showHome() {
-            document.getElementById('videoPlayer').src = '';
-            document.getElementById('homeContent').classList.remove('hidden');
-            document.getElementById('videoPage').classList.add('hidden');
-            document.getElementById('watchlistPage').classList.add('hidden');
-            document.getElementById('adminPage').classList.add('hidden');
-            loadVideos();
-        }
-
-        function filterCategory(category) {
-            showHome();
-            setTimeout(() => {
-                document.getElementById(category + 'Section').scrollIntoView({ behavior: 'smooth' });
-            }, 100);
-        }
-
-        function searchVideos() {
-            const query = document.getElementById('searchInput').value.toLowerCase();
-            const videos = getVideos();
-            
-            if (query.length < 2) { loadVideos(); return; }
-            
-            const filtered = videos.filter(v => v.title.toLowerCase().includes(query) || v.description.toLowerCase().includes(query));
-            
-            ['live', 'replays', 'highlights', 'altro'].forEach(cat => {
-                const container = document.getElementById(cat + 'Videos');
-                const catVideos = filtered.filter(v => v.category === cat);
-                container.innerHTML = catVideos.length ? catVideos.map(v => createVideoCard(v)).join('') : '<p class="text-gray-500 py-4 text-sm">Nessun risultato</p>';
+        function hideAllPages() {
+            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage'].forEach(id => {
+                document.getElementById(id).classList.add('hidden');
             });
+            document.getElementById('videoPlayer').src = '';
+        }
+
+        function showHome() {
+            hideAllPages();
+            document.getElementById('homeContent').classList.remove('hidden');
+            loadVideos();
         }
 
         // Admin
         function showAdmin() {
             if (!currentUser.isAdmin) return;
-            
-            document.getElementById('homeContent').classList.add('hidden');
-            document.getElementById('videoPage').classList.add('hidden');
-            document.getElementById('watchlistPage').classList.add('hidden');
+            hideAllPages();
             document.getElementById('adminPage').classList.remove('hidden');
-            
+            updateAdminStats();
             loadAdminVideoList();
+            loadAdminNewsList();
+            loadAdminPronosticiList();
             loadMembersList();
         }
 
+        function showAdminTab(tab) {
+            document.querySelectorAll('.admin-tab').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById('admin' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Tab').classList.remove('hidden');
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+        }
+
+        function updateAdminStats() {
+            document.getElementById('statVideos').textContent = videosCache.length;
+            document.getElementById('statUsers').textContent = usersCache.filter(u => !u.isAdmin).length;
+            document.getElementById('statViews').textContent = videosCache.reduce((sum, v) => sum + (v.views || 0), 0);
+            document.getElementById('statNews').textContent = newsCache.length;
+        }
+
         function addVideo() {
-            const title = document.getElementById('newVideoTitle').value;
-            const url = document.getElementById('newVideoUrl').value;
-            const desc = document.getElementById('newVideoDesc').value;
+            const title = document.getElementById('newVideoTitle').value.trim();
+            const url = document.getElementById('newVideoUrl').value.trim();
             const category = document.getElementById('newVideoCategory').value;
-            let thumbnail = document.getElementById('newVideoThumbnail').value;
-            
-            if (!title || !url) {
-                alert('Inserisci titolo e URL');
-                return;
-            }
-            
-            if (!thumbnail) {
-                const videoId = extractYouTubeId(url);
-                if (videoId) thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-            }
-            
-            const newVideo = {
-                id: 'v_' + Date.now(),
-                title, url, description: desc, category,
-                thumbnail: thumbnail || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
-                date: new Date().toISOString().split('T')[0],
-                comments: []
-            };
-            
-            saveVideo(newVideo);
-            
-            document.getElementById('newVideoTitle').value = '';
-            document.getElementById('newVideoUrl').value = '';
-            document.getElementById('newVideoDesc').value = '';
-            document.getElementById('newVideoThumbnail').value = '';
-            
-            showNotification('✅ Video aggiunto!');
+            const description = document.getElementById('newVideoDesc').value.trim();
+            const thumbnail = document.getElementById('newVideoThumbnail').value.trim();
+
+            if (!title || !url) return showNotification('⚠️ Inserisci titolo e URL');
+
+            const videoId = extractYouTubeId(url);
+            const newVideo = { title, url, category, description, thumbnail: thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''), date: new Date().toLocaleDateString('it-IT'), views: 0, likes: 0, comments: [] };
+            const newRef = db.ref('videos').push();
+            newVideo.id = newRef.key;
+            newRef.set(newVideo).then(() => {
+                ['newVideoTitle', 'newVideoUrl', 'newVideoDesc', 'newVideoThumbnail'].forEach(id => document.getElementById(id).value = '');
+                showNotification('✅ Video aggiunto!');
+            });
         }
 
         function loadAdminVideoList() {
-            const videos = getVideos();
-            document.getElementById('adminVideoList').innerHTML = videos.map(v => `
-                <div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-700 rounded-lg p-3 md:p-4 gap-3">
-                    <div class="flex items-center gap-3 md:gap-4">
-                        <img src="${v.thumbnail}" alt="${v.title}" class="w-20 md:w-24 h-14 md:h-16 object-cover rounded">
-                        <div class="flex-1 min-w-0">
-                            <h4 class="font-medium text-sm md:text-base truncate">${v.title}</h4>
-                            <p class="text-xs md:text-sm text-gray-400">${getCategoryLabel(v.category)} • ${v.date}</p>
-                        </div>
+            const container = document.getElementById('adminVideoList');
+            container.innerHTML = videosCache.length === 0 ? '<p class="text-gray-500">Nessun video</p>' : videosCache.map(v => `
+                <div class="flex flex-col md:flex-row md:items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        <img src="${v.thumbnail || ''}" class="w-20 h-12 object-cover rounded">
+                        <div class="min-w-0"><p class="font-medium truncate">${v.title}</p><p class="text-sm text-gray-400">${getCategoryLabel(v.category)} • 👁️ ${v.views || 0}</p></div>
                     </div>
                     <div class="flex gap-2 justify-end">
-                        <button onclick="openEditModal('${v.id}')" class="bg-blue-600 px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 transition text-xs md:text-sm">✏️</button>
-                        <button onclick="deleteVideo('${v.id}')" class="bg-red-600 px-3 md:px-4 py-2 rounded-lg hover:bg-red-700 transition text-xs md:text-sm">🗑️</button>
+                        <button onclick="openEditModal('${v.id}')" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm">✏️</button>
+                        <button onclick="deleteVideo('${v.id}')" class="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm">🗑️</button>
                     </div>
                 </div>
             `).join('');
         }
 
-        function refreshVideos() {
-            loadAdminVideoList();
-            loadVideos();
-            showNotification('🔄 Lista aggiornata!');
-        }
-
         function openEditModal(id) {
-            const videos = getVideos();
-            const video = videos.find(v => v.id === id);
+            const video = videosCache.find(v => v.id === id);
             if (!video) return;
-            
             document.getElementById('editVideoId').value = video.id;
             document.getElementById('editVideoTitle').value = video.title;
             document.getElementById('editVideoUrl').value = video.url;
             document.getElementById('editVideoDesc').value = video.description || '';
             document.getElementById('editVideoCategory').value = video.category;
-            document.getElementById('editVideoThumbnail').value = video.thumbnail || '';
-            document.getElementById('editVideoDate').value = video.date;
-            
             document.getElementById('editVideoModal').classList.remove('hidden');
         }
 
-        function closeEditModal() {
-            document.getElementById('editVideoModal').classList.add('hidden');
-        }
+        function closeEditModal() { document.getElementById('editVideoModal').classList.add('hidden'); }
 
         function saveVideoEdit() {
             const id = document.getElementById('editVideoId').value;
-            const videos = getVideos();
-            const video = videos.find(v => v.id === id);
-            if (!video) return;
-            
-            let thumbnail = document.getElementById('editVideoThumbnail').value;
-            const url = document.getElementById('editVideoUrl').value;
-            
-            if (!thumbnail) {
-                const videoId = extractYouTubeId(url);
-                if (videoId) thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
-            }
-            
-            video.title = document.getElementById('editVideoTitle').value;
-            video.url = url;
-            video.description = document.getElementById('editVideoDesc').value;
-            video.category = document.getElementById('editVideoCategory').value;
-            video.thumbnail = thumbnail || video.thumbnail;
-            video.date = document.getElementById('editVideoDate').value;
-            
-            saveVideo(video);
-            closeEditModal();
-            showNotification('✅ Video modificato!');
+            const updates = {
+                title: document.getElementById('editVideoTitle').value.trim(),
+                url: document.getElementById('editVideoUrl').value.trim(),
+                description: document.getElementById('editVideoDesc').value.trim(),
+                category: document.getElementById('editVideoCategory').value
+            };
+            db.ref('videos/' + id).update(updates).then(() => { closeEditModal(); showNotification('✅ Video modificato!'); });
         }
 
         function deleteVideo(id) {
-            if (!confirm('Sei sicuro di voler eliminare questo video?')) return;
-            deleteVideoFromDB(id);
-            showNotification('🗑️ Video eliminato');
+            if (!confirm('Eliminare questo video?')) return;
+            db.ref('videos/' + id).remove().then(() => showNotification('🗑️ Video eliminato'));
         }
 
         function loadMembersList() {
-            const users = getUsers();
-            document.getElementById('membersTableBody').innerHTML = users.map(u => {
-                const avatarContent = u.profilePhoto 
-                    ? `<img src="${u.profilePhoto}" alt="${u.username}" class="w-8 h-8 rounded-full object-cover">`
-                    : `<div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center font-bold text-sm">${u.username.charAt(0).toUpperCase()}</div>`;
-                
-                return `
-                    <tr class="border-b border-gray-700">
-                        <td class="px-3 md:px-4 py-3">
-                            <div class="flex items-center gap-2">
-                                ${avatarContent}
-                                <span>${u.nome || '-'} ${u.cognome || ''}</span>
-                            </div>
-                        </td>
-                        <td class="px-3 md:px-4 py-3">${u.username}</td>
-                        <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.email}</td>
-                        <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.date}</td>
-                        <td class="px-3 md:px-4 py-3"><span class="px-2 py-1 rounded text-xs ${u.isAdmin ? 'bg-yellow-600' : 'bg-green-600'}">${u.isAdmin ? 'Admin' : 'tv+'}</span></td>
-                    </tr>
-                `;
+            const container = document.getElementById('membersList');
+            const members = usersCache.filter(u => !u.isAdmin);
+            container.innerHTML = members.length === 0 ? '<p class="text-gray-500">Nessun membro</p>' : members.map(u => {
+                const badge = getUserBadge(u.points || 0);
+                return `<div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
+                        ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold">${u.username.charAt(0).toUpperCase()}</span>`}
+                    </div>
+                    <div class="flex-1 min-w-0"><p class="font-medium">${u.nome} ${u.cognome}</p><p class="text-sm text-gray-400">${u.email}</p></div>
+                    <span class="badge bg-gray-600">${badge.emoji} ${u.points || 0} 💚</span>
+                </div>`;
             }).join('');
         }
 
         // Logo
+        function applyLogo(logo) {
+            const headerLogo = document.getElementById('headerLogo');
+            const headerEmoji = document.getElementById('headerLogoEmoji');
+            const authLogo = document.getElementById('authLogo');
+            const authPlaceholder = document.getElementById('authLogoPlaceholder');
+            const preview = document.getElementById('logoPreview');
+            const noLogoText = document.getElementById('noLogoText');
+
+            if (logo) {
+                headerLogo.src = logo; headerLogo.classList.remove('hidden'); headerEmoji.classList.add('hidden');
+                authLogo.src = logo; authLogo.classList.remove('hidden'); authPlaceholder.classList.add('hidden');
+                if (preview) { preview.src = logo; preview.classList.remove('hidden'); noLogoText?.classList.add('hidden'); }
+            } else {
+                headerLogo.classList.add('hidden'); headerEmoji.classList.remove('hidden');
+                authLogo.classList.add('hidden'); authPlaceholder.classList.remove('hidden');
+                if (preview) { preview.classList.add('hidden'); noLogoText?.classList.remove('hidden'); }
+            }
+        }
+
         function uploadLogo(event) {
             const file = event.target.files[0];
-            if (file) {
-                const reader = new FileReader();
-                reader.onload = function(e) {
-                    saveLogo(e.target.result);
-                    showNotification('✅ Logo caricato!');
-                };
-                reader.readAsDataURL(file);
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = e => db.ref('settings/logo').set(e.target.result).then(() => showNotification('✅ Logo caricato!'));
+            reader.readAsDataURL(file);
+        }
+
+        function removeLogo() { db.ref('settings/logo').remove().then(() => showNotification('🗑️ Logo rimosso')); }
+
+        // Points Info Modal
+        function showPointsInfo() { document.getElementById('pointsInfoModal').classList.remove('hidden'); }
+        function closePointsInfo() { document.getElementById('pointsInfoModal').classList.add('hidden'); }
+
+        // Biancoverdi Card Functions
+        function generateCardNumber(id) {
+            const hash = id.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0);
+            return 'BV-' + Math.abs(hash).toString(36).toUpperCase().substring(0, 6) + '-2024';
+        }
+
+        function generateQRCode(data) {
+            // Simple QR code pattern generator
+            const size = 64;
+            const canvas = document.createElement('canvas');
+            canvas.width = size;
+            canvas.height = size;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = 'black';
+            
+            // Generate pattern based on data
+            const hash = data.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+            const pattern = Math.abs(hash).toString(2).padStart(49, '0');
+            
+            // Corner squares
+            [0, size-14].forEach(x => {
+                [0, size-14].forEach(y => {
+                    if (x === size-14 && y === size-14) return;
+                    ctx.fillRect(x+2, y+2, 10, 10);
+                    ctx.fillStyle = 'white';
+                    ctx.fillRect(x+4, y+4, 6, 6);
+                    ctx.fillStyle = 'black';
+                    ctx.fillRect(x+5, y+5, 4, 4);
+                });
+            });
+            
+            // Data pattern
+            for (let i = 0; i < 49; i++) {
+                if (pattern[i] === '1') {
+                    const x = 16 + (i % 7) * 4;
+                    const y = 16 + Math.floor(i / 7) * 4;
+                    ctx.fillRect(x, y, 3, 3);
+                }
             }
+            
+            return canvas.toDataURL();
+        }
+
+        function updateCardDisplay() {
+            const badge = getUserBadge(currentUser.points || 0);
+            
+            // Card avatar
+            const cardAvatarImg = document.getElementById('cardAvatarImg');
+            const cardAvatarInitial = document.getElementById('cardAvatarInitial');
+            if (currentUser.profilePhoto) {
+                cardAvatarImg.src = currentUser.profilePhoto;
+                cardAvatarImg.classList.remove('hidden');
+                cardAvatarInitial.classList.add('hidden');
+            } else {
+                cardAvatarImg.classList.add('hidden');
+                cardAvatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
+                cardAvatarInitial.classList.remove('hidden');
+            }
+            
+            // Card logo
+            const headerLogo = document.getElementById('headerLogo');
+            const cardLogo = document.getElementById('cardLogo');
+            const cardLogoEmoji = document.getElementById('cardLogoEmoji');
+            if (headerLogo && !headerLogo.classList.contains('hidden')) {
+                cardLogo.src = headerLogo.src;
+                cardLogo.classList.remove('hidden');
+                cardLogoEmoji.classList.add('hidden');
+            }
+            
+            document.getElementById('cardFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
+            document.getElementById('cardUsername').textContent = `@${currentUser.username}`;
+            document.getElementById('cardNumber').textContent = generateCardNumber(currentUser.id);
+            document.getElementById('cardBadge').textContent = `${badge.emoji} ${badge.name}`;
+            document.getElementById('cardDate').textContent = `Membro dal ${currentUser.date}`;
+            
+            // QR Code
+            const qrData = `cesticatv://member/${currentUser.id}`;
+            document.getElementById('cardQR').innerHTML = `<img src="${generateQRCode(qrData)}" class="w-full h-full">`;
+        }
+
+        function downloadCard() {
+            const card = document.getElementById('memberCard');
+            showNotification('📥 Preparazione download...');
+            
+            // Use html2canvas-like approach with canvas
+            const canvas = document.createElement('canvas');
+            const scale = 2;
+            canvas.width = card.offsetWidth * scale;
+            canvas.height = card.offsetHeight * scale;
+            const ctx = canvas.getContext('2d');
+            ctx.scale(scale, scale);
+            
+            // Draw gradient background
+            const gradient = ctx.createLinearGradient(0, 0, card.offsetWidth, card.offsetHeight);
+            gradient.addColorStop(0, '#1a1a1a');
+            gradient.addColorStop(0.5, '#111');
+            gradient.addColorStop(1, '#000');
+            ctx.fillStyle = gradient;
+            ctx.roundRect(0, 0, card.offsetWidth, card.offsetHeight, 12);
+            ctx.fill();
+            
+            // Border
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            ctx.roundRect(0, 0, card.offsetWidth, card.offsetHeight, 12);
+            ctx.stroke();
+            
+            // Text
+            ctx.fillStyle = '#22c55e';
+            ctx.font = 'bold 10px Poppins';
+            ctx.textAlign = 'right';
+            ctx.fillText('CESTISTICA TV+', card.offsetWidth - 16, 24);
+            
+            ctx.fillStyle = 'white';
+            ctx.font = 'bold 16px Poppins';
+            ctx.textAlign = 'left';
+            ctx.fillText(`${currentUser.nome} ${currentUser.cognome}`, 70, 60);
+            
+            ctx.fillStyle = '#22c55e';
+            ctx.font = '12px Poppins';
+            ctx.fillText(`@${currentUser.username}`, 70, 78);
+            
+            ctx.fillStyle = '#666';
+            ctx.font = '8px Poppins';
+            ctx.fillText('N° TESSERA', 16, 105);
+            
+            ctx.fillStyle = '#22c55e';
+            ctx.font = '10px monospace';
+            ctx.fillText(generateCardNumber(currentUser.id), 16, 118);
+            
+            const badge = getUserBadge(currentUser.points || 0);
+            ctx.fillStyle = '#22c55e';
+            ctx.font = '10px Poppins';
+            ctx.fillText(`${badge.emoji} ${badge.name}`, 16, 140);
+            
+            ctx.fillStyle = '#666';
+            ctx.textAlign = 'right';
+            ctx.fillText(`Membro dal ${currentUser.date}`, card.offsetWidth - 16, 140);
+            
+            // Download
+            const link = document.createElement('a');
+            link.download = `biancoverdi-card-${currentUser.username}.png`;
+            link.href = canvas.toDataURL();
+            link.click();
+            
+            showNotification('✅ Card scaricata!');
         }
 
         // Notifications
         function showNotification(message) {
             const notification = document.createElement('div');
-            notification.className = 'fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-green-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 text-sm md:text-base';
-            notification.innerHTML = `<span class="font-medium">${message}</span>`;
+            notification.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-50 border border-green-500';
+            notification.textContent = message;
             document.body.appendChild(notification);
             setTimeout(() => notification.remove(), 3000);
-        }
-
-        // Session check
-        function checkSession() {
-            const savedUser = localStorage.getItem('cesticaCurrentUser');
-            if (savedUser) {
-                currentUser = JSON.parse(savedUser);
-                
-                // Wait for users to load then verify
-                setTimeout(() => {
-                    const users = getUsers();
-                    const userExists = users.find(u => u.username === currentUser.username);
-                    
-                    if (userExists) {
-                        document.getElementById('authModal').classList.add('hidden');
-                        document.getElementById('mainApp').classList.remove('hidden');
-                        document.getElementById('currentUser').textContent = currentUser.username;
-                        document.getElementById('currentUserMobile').textContent = currentUser.username.substring(0, 2).toUpperCase();
-                        if (currentUser.isAdmin) {
-                            document.getElementById('adminBtn').classList.remove('hidden');
-                            document.getElementById('mobileAdminBtn').classList.remove('hidden');
-                        }
-                        loadVideos();
-                    } else {
-                        document.getElementById('authModal').classList.remove('hidden');
-                    }
-                }, 1500);
-            } else {
-                document.getElementById('authModal').classList.remove('hidden');
-            }
         }
 
         // Initialize

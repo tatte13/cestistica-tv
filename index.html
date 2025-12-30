@@ -158,8 +158,8 @@
     </div>
 
     <!-- User Details Modal -->
-    <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30">
+    <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 my-8">
             <div class="flex items-center justify-between mb-6">
                 <h3 class="text-xl font-bold">👤 Dettagli Utente</h3>
                 <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white">
@@ -167,11 +167,23 @@
                 </button>
             </div>
             <div class="space-y-4">
-                <div class="flex items-center gap-4 mb-6">
-                    <div id="userAvatar" class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center text-2xl font-bold"></div>
-                    <div>
-                        <p id="userFullName" class="font-semibold text-lg"></p>
-                        <p class="text-green-400 text-sm">cestistica tv+ Member</p>
+                <!-- Profile Photo Section -->
+                <div class="flex flex-col items-center mb-6">
+                    <div class="relative group">
+                        <div id="userAvatar" class="w-24 h-24 bg-green-600 rounded-full flex items-center justify-center text-3xl font-bold overflow-hidden">
+                            <img id="userAvatarImg" src="" alt="" class="w-full h-full object-cover hidden">
+                            <span id="userAvatarInitial"></span>
+                        </div>
+                        <label class="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition cursor-pointer">
+                            <svg class="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                            <input type="file" id="profilePhotoInput" accept="image/*" onchange="uploadProfilePhoto(event)" class="hidden">
+                        </label>
+                    </div>
+                    <p id="userFullName" class="font-semibold text-lg mt-3"></p>
+                    <p class="text-green-400 text-sm">cestistica tv+ Member</p>
+                    <div class="flex gap-2 mt-3">
+                        <button onclick="document.getElementById('profilePhotoInput').click()" class="text-xs bg-green-600 px-3 py-1.5 rounded-lg hover:bg-green-700 transition">📷 Cambia Foto</button>
+                        <button onclick="removeProfilePhoto()" id="removePhotoBtn" class="text-xs bg-red-600 px-3 py-1.5 rounded-lg hover:bg-red-700 transition hidden">🗑️ Rimuovi</button>
                     </div>
                 </div>
                 <div class="bg-gray-700 rounded-lg p-4 space-y-3">
@@ -665,7 +677,24 @@
         // User Details
         function showUserDetails() {
             if (!currentUser) return;
-            document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+            
+            // Handle profile photo
+            const avatarImg = document.getElementById('userAvatarImg');
+            const avatarInitial = document.getElementById('userAvatarInitial');
+            const removeBtn = document.getElementById('removePhotoBtn');
+            
+            if (currentUser.profilePhoto) {
+                avatarImg.src = currentUser.profilePhoto;
+                avatarImg.classList.remove('hidden');
+                avatarInitial.classList.add('hidden');
+                removeBtn.classList.remove('hidden');
+            } else {
+                avatarImg.classList.add('hidden');
+                avatarInitial.classList.remove('hidden');
+                avatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
+                removeBtn.classList.add('hidden');
+            }
+            
             document.getElementById('userFullName').textContent = `${currentUser.nome || ''} ${currentUser.cognome || ''}`.trim() || currentUser.username;
             document.getElementById('userUsername').textContent = currentUser.username;
             document.getElementById('userEmail').textContent = currentUser.email;
@@ -676,6 +705,84 @@
 
         function closeUserDetails() {
             document.getElementById('userDetailsModal').classList.add('hidden');
+        }
+        
+        // Profile Photo functions
+        function uploadProfilePhoto(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // Check file size (max 500KB for Firebase)
+            if (file.size > 500000) {
+                showNotification('⚠️ Immagine troppo grande (max 500KB)');
+                return;
+            }
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                // Resize image to reduce size
+                const img = new Image();
+                img.onload = function() {
+                    const canvas = document.createElement('canvas');
+                    const maxSize = 200;
+                    let width = img.width;
+                    let height = img.height;
+                    
+                    if (width > height) {
+                        if (width > maxSize) {
+                            height *= maxSize / width;
+                            width = maxSize;
+                        }
+                    } else {
+                        if (height > maxSize) {
+                            width *= maxSize / height;
+                            height = maxSize;
+                        }
+                    }
+                    
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, width, height);
+                    
+                    const resizedPhoto = canvas.toDataURL('image/jpeg', 0.8);
+                    
+                    // Update user in Firebase
+                    currentUser.profilePhoto = resizedPhoto;
+                    saveUser(currentUser);
+                    localStorage.setItem('cesticaCurrentUser', JSON.stringify(currentUser));
+                    
+                    // Update UI
+                    showUserDetails();
+                    updateHeaderAvatar();
+                    showNotification('📷 Foto profilo aggiornata!');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeProfilePhoto() {
+            if (!confirm('Vuoi rimuovere la foto profilo?')) return;
+            
+            delete currentUser.profilePhoto;
+            saveUser(currentUser);
+            localStorage.setItem('cesticaCurrentUser', JSON.stringify(currentUser));
+            
+            showUserDetails();
+            updateHeaderAvatar();
+            showNotification('🗑️ Foto profilo rimossa');
+        }
+        
+        function updateHeaderAvatar() {
+            // This function can be extended to show avatar in header if needed
+        }
+        
+        function getUserAvatar(user) {
+            if (user.profilePhoto) {
+                return `<img src="${user.profilePhoto}" alt="${user.username}" class="w-full h-full object-cover rounded-full">`;
+            }
+            return user.username.charAt(0).toUpperCase();
         }
 
         // Auth
@@ -1081,20 +1188,29 @@
             const videos = getVideos();
             const video = videos.find(v => v.id === currentVideo.id);
             const comments = video?.comments || [];
+            const users = getUsers();
             
             if (comments.length === 0) {
                 document.getElementById('commentsList').innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">Nessun commento ancora. Sii il primo!</p>';
             } else {
-                document.getElementById('commentsList').innerHTML = comments.map(c => `
-                    <div class="bg-gray-700 rounded-lg p-3 md:p-4">
-                        <div class="flex items-center gap-2 mb-2">
-                            <div class="w-7 h-7 md:w-8 md:h-8 bg-green-600 rounded-full flex items-center justify-center font-bold text-sm">${c.user.charAt(0).toUpperCase()}</div>
-                            <span class="font-medium text-sm">${c.user}</span>
-                            <span class="text-gray-400 text-xs">${c.date}</span>
+                document.getElementById('commentsList').innerHTML = comments.map(c => {
+                    // Find the user to get their profile photo
+                    const commentUser = users.find(u => u.username === c.user);
+                    const avatarContent = commentUser && commentUser.profilePhoto 
+                        ? `<img src="${commentUser.profilePhoto}" alt="${c.user}" class="w-full h-full object-cover">`
+                        : c.user.charAt(0).toUpperCase();
+                    
+                    return `
+                        <div class="bg-gray-700 rounded-lg p-3 md:p-4">
+                            <div class="flex items-center gap-2 mb-2">
+                                <div class="w-7 h-7 md:w-8 md:h-8 bg-green-600 rounded-full flex items-center justify-center font-bold text-sm overflow-hidden">${avatarContent}</div>
+                                <span class="font-medium text-sm">${c.user}</span>
+                                <span class="text-gray-400 text-xs">${c.date}</span>
+                            </div>
+                            <p class="text-gray-300 text-sm">${c.text}</p>
                         </div>
-                        <p class="text-gray-300 text-sm">${c.text}</p>
-                    </div>
-                `).join('');
+                    `;
+                }).join('');
             }
         }
 
@@ -1109,7 +1225,8 @@
             video.comments.unshift({
                 user: currentUser.username,
                 text: text,
-                date: new Date().toLocaleString('it-IT')
+                date: new Date().toLocaleString('it-IT'),
+                userPhoto: currentUser.profilePhoto || null
             });
             
             saveVideo(video);
@@ -1331,15 +1448,26 @@
 
         function loadMembersList() {
             const users = getUsers();
-            document.getElementById('membersTableBody').innerHTML = users.map(u => `
-                <tr class="border-b border-gray-700">
-                    <td class="px-3 md:px-4 py-3">${u.nome || '-'} ${u.cognome || ''}</td>
-                    <td class="px-3 md:px-4 py-3">${u.username}</td>
-                    <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.email}</td>
-                    <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.date}</td>
-                    <td class="px-3 md:px-4 py-3"><span class="px-2 py-1 rounded text-xs ${u.isAdmin ? 'bg-yellow-600' : 'bg-green-600'}">${u.isAdmin ? 'Admin' : 'tv+'}</span></td>
-                </tr>
-            `).join('');
+            document.getElementById('membersTableBody').innerHTML = users.map(u => {
+                const avatarContent = u.profilePhoto 
+                    ? `<img src="${u.profilePhoto}" alt="${u.username}" class="w-8 h-8 rounded-full object-cover">`
+                    : `<div class="w-8 h-8 bg-green-600 rounded-full flex items-center justify-center font-bold text-sm">${u.username.charAt(0).toUpperCase()}</div>`;
+                
+                return `
+                    <tr class="border-b border-gray-700">
+                        <td class="px-3 md:px-4 py-3">
+                            <div class="flex items-center gap-2">
+                                ${avatarContent}
+                                <span>${u.nome || '-'} ${u.cognome || ''}</span>
+                            </div>
+                        </td>
+                        <td class="px-3 md:px-4 py-3">${u.username}</td>
+                        <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.email}</td>
+                        <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.date}</td>
+                        <td class="px-3 md:px-4 py-3"><span class="px-2 py-1 rounded text-xs ${u.isAdmin ? 'bg-yellow-600' : 'bg-green-600'}">${u.isAdmin ? 'Admin' : 'tv+'}</span></td>
+                    </tr>
+                `;
+            }).join('');
         }
 
         // Logo

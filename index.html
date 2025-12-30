@@ -682,7 +682,17 @@
                             <div id="newsImagesPreview" class="flex gap-2 mt-2 flex-wrap"></div>
                         </div>
                         
-                        <input type="text" id="newNewsVideo" placeholder="URL video YouTube (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-400 mb-2">🎬 Video (scegli un'opzione)</label>
+                            <input type="text" id="newNewsVideo" placeholder="URL video YouTube" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-2 border border-gray-600">
+                            <p class="text-xs text-gray-500 mb-2 text-center">— oppure —</p>
+                            <input type="file" id="newsVideoInput" accept="video/*" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <p class="text-xs text-gray-500 mt-1">⚠️ Upload diretto: max 10MB (per video più lunghi usa YouTube)</p>
+                            <div id="newsVideoPreview" class="mt-2 hidden">
+                                <video id="newsVideoPreviewPlayer" class="w-full max-h-40 rounded-lg" controls></video>
+                                <button onclick="removeNewsVideo()" class="text-red-400 text-sm mt-1 hover:underline">🗑️ Rimuovi video</button>
+                            </div>
+                        </div>
                         
                         <div class="flex gap-3">
                             <button onclick="addNews()" id="newsSubmitBtn" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Pubblica News</button>
@@ -716,18 +726,50 @@
                 <!-- Pronostici Tab -->
                 <div id="adminPronosticiTab" class="space-y-6 hidden">
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg font-bold mb-4">➕ Nuovo Pronostico</h3>
+                        <h3 class="text-lg font-bold mb-4" id="pronoFormTitle">➕ Nuovo Pronostico</h3>
+                        <input type="hidden" id="editPronoId">
                         <div class="grid md:grid-cols-2 gap-4">
-                            <input type="text" id="newPronoTeam1" placeholder="Squadra 1" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
-                            <input type="text" id="newPronoTeam2" placeholder="Squadra 2" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
-                            <input type="date" id="newPronoDate" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
-                            <input type="time" id="newPronoTime" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Squadra Casa</label>
+                                <input type="text" id="newPronoTeam1" placeholder="Es. Cestistica Savonese" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Squadra Ospite</label>
+                                <input type="text" id="newPronoTeam2" placeholder="Es. Basket Albenga" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Data Partita</label>
+                                <input type="date" id="newPronoDate" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Ora Partita</label>
+                                <input type="time" id="newPronoTime" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
                         </div>
-                        <button onclick="addPronostico()" class="mt-4 gradient-bg px-6 py-3 rounded-lg font-semibold">Crea Pronostico</button>
+                        <div class="flex gap-3 mt-4">
+                            <button onclick="addPronostico()" id="pronoSubmitBtn" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Crea Pronostico</button>
+                            <button onclick="cancelPronoEdit()" id="pronoCancelBtn" class="bg-gray-600 px-6 py-3 rounded-lg font-semibold hidden">Annulla</button>
+                        </div>
                     </div>
+                    
+                    <!-- Pronostici Attivi -->
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg font-bold mb-4">🎯 Gestione Pronostici</h3>
-                        <div id="adminPronosticiList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span class="w-3 h-3 bg-green-500 rounded-full"></span>
+                            Pronostici Attivi
+                        </h3>
+                        <div id="adminPronosticiAttivi" class="space-y-3"></div>
+                        <p id="noPronosticiAttivi" class="text-gray-500 text-center py-4 hidden">Nessun pronostico attivo</p>
+                    </div>
+                    
+                    <!-- Pronostici Conclusi -->
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+                            <span class="w-3 h-3 bg-gray-500 rounded-full"></span>
+                            Pronostici Conclusi
+                        </h3>
+                        <div id="adminPronosticiConclusi" class="space-y-3"></div>
+                        <p id="noPronosticiConclusi" class="text-gray-500 text-center py-4 hidden">Nessun pronostico concluso</p>
                     </div>
                 </div>
 
@@ -852,6 +894,7 @@
                     snapshot.forEach((child) => {
                         pronosticiCache.push({ id: child.key, ...child.val() });
                     });
+                    if (currentUser && currentUser.isAdmin) loadAdminPronosticiList();
                 });
 
                 db.ref('settings/logo').on('value', (snapshot) => {
@@ -1611,12 +1654,19 @@
             hideAllPages();
             document.getElementById('newsArticlePage').classList.remove('hidden');
             
+            // Video YouTube o video caricato
             let videoEmbed = '';
             if (news.video) {
                 const videoId = extractYouTubeId(news.video);
                 if (videoId) {
                     videoEmbed = `<div class="aspect-video my-6"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full rounded-xl" frameborder="0" allowfullscreen></iframe></div>`;
                 }
+            } else if (news.videoFile) {
+                videoEmbed = `
+                    <div class="my-6">
+                        <video src="${news.videoFile}" class="w-full rounded-xl" controls></video>
+                    </div>
+                `;
             }
             
             // Galleria immagini
@@ -1825,6 +1875,7 @@
             showAdminTab('video');
             loadAdminVideoList();
             loadAdminNewsList();
+            loadAdminPronosticiList();
             loadMembersList();
             updateAdminStats();
         }
@@ -1912,7 +1963,45 @@
 
         // News Admin
         let newsImages = [];
+        let newsVideoFile = null;
         let editingNewsId = null;
+        
+        // Event listener per upload video news
+        document.addEventListener('DOMContentLoaded', function() {
+            const videoInput = document.getElementById('newsVideoInput');
+            if (videoInput) {
+                videoInput.addEventListener('change', function(e) {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    
+                    // Max 10MB
+                    if (file.size > 10 * 1024 * 1024) {
+                        alert('Video troppo grande! Max 10MB. Per video più lunghi usa YouTube.');
+                        e.target.value = '';
+                        return;
+                    }
+                    
+                    const reader = new FileReader();
+                    reader.onload = function(event) {
+                        newsVideoFile = event.target.result;
+                        const preview = document.getElementById('newsVideoPreview');
+                        const player = document.getElementById('newsVideoPreviewPlayer');
+                        player.src = newsVideoFile;
+                        preview.classList.remove('hidden');
+                        // Svuota il campo YouTube se si carica un file
+                        document.getElementById('newNewsVideo').value = '';
+                    };
+                    reader.readAsDataURL(file);
+                });
+            }
+        });
+        
+        function removeNewsVideo() {
+            newsVideoFile = null;
+            document.getElementById('newsVideoInput').value = '';
+            document.getElementById('newsVideoPreview').classList.add('hidden');
+            document.getElementById('newsVideoPreviewPlayer').src = '';
+        }
         
         document.getElementById('newsImagesInput')?.addEventListener('change', function(e) {
             const files = Array.from(e.target.files).slice(0, 5);
@@ -1961,12 +2050,14 @@
         function addNews() {
             const title = document.getElementById('newNewsTitle').value.trim();
             const content = document.getElementById('newNewsContent').value.trim();
-            const video = document.getElementById('newNewsVideo').value.trim();
+            const youtubeVideo = document.getElementById('newNewsVideo').value.trim();
             
             if (!title || !content) return alert('Inserisci titolo e contenuto');
             
             const newsData = {
-                title, content, video,
+                title, content,
+                video: youtubeVideo,
+                videoFile: newsVideoFile || null,
                 images: newsImages,
                 image: newsImages[0] || '',
                 date: new Date().toLocaleDateString('it-IT')
@@ -1985,7 +2076,10 @@
             document.getElementById('newNewsVideo').value = '';
             document.getElementById('newsImagesInput').value = '';
             document.getElementById('newsImagesPreview').innerHTML = '';
+            document.getElementById('newsVideoInput').value = '';
+            document.getElementById('newsVideoPreview').classList.add('hidden');
             newsImages = [];
+            newsVideoFile = null;
             
             loadAdminNewsList();
         }
@@ -2031,6 +2125,18 @@
             const preview = document.getElementById('newsImagesPreview');
             preview.innerHTML = newsImages.map(img => `<img src="${img}" class="w-16 h-16 object-cover rounded">`).join('');
             
+            // Mostra video caricato esistente
+            if (news.videoFile) {
+                newsVideoFile = news.videoFile;
+                const videoPreview = document.getElementById('newsVideoPreview');
+                const videoPlayer = document.getElementById('newsVideoPreviewPlayer');
+                videoPlayer.src = news.videoFile;
+                videoPreview.classList.remove('hidden');
+            } else {
+                newsVideoFile = null;
+                document.getElementById('newsVideoPreview').classList.add('hidden');
+            }
+            
             document.getElementById('newsFormTitle').textContent = '✏️ Modifica News';
             document.getElementById('newsSubmitBtn').textContent = 'Salva Modifiche';
             document.getElementById('newsCancelBtn').classList.remove('hidden');
@@ -2047,7 +2153,11 @@
             document.getElementById('newNewsVideo').value = '';
             document.getElementById('newsImagesInput').value = '';
             document.getElementById('newsImagesPreview').innerHTML = '';
+            document.getElementById('newsVideoInput').value = '';
+            document.getElementById('newsVideoPreview').classList.add('hidden');
+            document.getElementById('newsVideoPreviewPlayer').src = '';
             newsImages = [];
+            newsVideoFile = null;
             
             document.getElementById('newsFormTitle').textContent = '➕ Nuova News';
             document.getElementById('newsSubmitBtn').textContent = 'Pubblica News';
@@ -2081,6 +2191,8 @@
         }
 
         // Pronostici Admin
+        let editingPronoId = null;
+        
         function addPronostico() {
             const team1 = document.getElementById('newPronoTeam1').value.trim();
             const team2 = document.getElementById('newPronoTeam2').value.trim();
@@ -2089,8 +2201,181 @@
             
             if (!team1 || !team2 || !date || !time) return alert('Compila tutti i campi');
             
-            db.ref('pronostici').push().set({ team1, team2, date, time, votes: {} });
+            const pronoData = { team1, team2, date, time, votes: {}, result: null };
+            
+            if (editingPronoId) {
+                db.ref('pronostici/' + editingPronoId).update({ team1, team2, date, time });
+                cancelPronoEdit();
+            } else {
+                db.ref('pronostici').push().set(pronoData);
+            }
+            
             ['newPronoTeam1', 'newPronoTeam2', 'newPronoDate', 'newPronoTime'].forEach(id => document.getElementById(id).value = '');
+            loadAdminPronosticiList();
+        }
+        
+        function loadAdminPronosticiList() {
+            const attiviContainer = document.getElementById('adminPronosticiAttivi');
+            const conclusiContainer = document.getElementById('adminPronosticiConclusi');
+            const noAttivi = document.getElementById('noPronosticiAttivi');
+            const noConclusi = document.getElementById('noPronosticiConclusi');
+            
+            if (!attiviContainer || !conclusiContainer) return;
+            
+            const attivi = pronosticiCache.filter(p => !p.result);
+            const conclusi = pronosticiCache.filter(p => p.result);
+            
+            // Pronostici Attivi
+            if (attivi.length === 0) {
+                attiviContainer.innerHTML = '';
+                noAttivi.classList.remove('hidden');
+            } else {
+                noAttivi.classList.add('hidden');
+                attiviContainer.innerHTML = attivi.map(p => {
+                    const votes1 = p.votes ? Object.values(p.votes).filter(v => v === 1).length : 0;
+                    const votes2 = p.votes ? Object.values(p.votes).filter(v => v === 2).length : 0;
+                    const totalVotes = votes1 + votes2;
+                    
+                    return `
+                        <div class="bg-gray-700 rounded-xl p-4">
+                            <div class="flex justify-between items-start mb-3">
+                                <div>
+                                    <p class="text-sm text-gray-400">📅 ${p.date} • 🕐 ${p.time}</p>
+                                    <p class="text-xs text-green-400 mt-1">👥 ${totalVotes} voti totali</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <button onclick="editPronostico('${p.id}')" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm" title="Modifica">✏️</button>
+                                    <button onclick="deletePronostico('${p.id}')" class="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm" title="Elimina">🗑️</button>
+                                </div>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-2 items-center mb-4">
+                                <div class="text-center">
+                                    <p class="font-bold">${p.team1}</p>
+                                    <p class="text-sm text-green-400">${votes1} voti</p>
+                                </div>
+                                <div class="text-center text-2xl font-bold text-gray-500">VS</div>
+                                <div class="text-center">
+                                    <p class="font-bold">${p.team2}</p>
+                                    <p class="text-sm text-green-400">${votes2} voti</p>
+                                </div>
+                            </div>
+                            
+                            <div class="border-t border-gray-600 pt-3">
+                                <p class="text-sm text-gray-400 mb-2">🏆 Segna risultato finale:</p>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button onclick="setPronoResult('${p.id}', 1, '${p.team1}')" class="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg text-sm font-medium transition">
+                                        ✅ Vince ${p.team1}
+                                    </button>
+                                    <button onclick="setPronoResult('${p.id}', 2, '${p.team2}')" class="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg text-sm font-medium transition">
+                                        ✅ Vince ${p.team2}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // Pronostici Conclusi
+            if (conclusi.length === 0) {
+                conclusiContainer.innerHTML = '';
+                noConclusi.classList.remove('hidden');
+            } else {
+                noConclusi.classList.add('hidden');
+                conclusiContainer.innerHTML = conclusi.map(p => {
+                    const votes1 = p.votes ? Object.values(p.votes).filter(v => v === 1).length : 0;
+                    const votes2 = p.votes ? Object.values(p.votes).filter(v => v === 2).length : 0;
+                    const winnerName = p.result === 1 ? p.team1 : p.team2;
+                    
+                    return `
+                        <div class="bg-gray-700/50 rounded-xl p-4 border border-gray-600">
+                            <div class="flex justify-between items-start mb-2">
+                                <div>
+                                    <p class="text-sm text-gray-400">📅 ${p.date}</p>
+                                </div>
+                                <span class="bg-gray-600 text-xs px-2 py-1 rounded">Concluso</span>
+                            </div>
+                            
+                            <div class="grid grid-cols-3 gap-2 items-center mb-2">
+                                <div class="text-center ${p.result === 1 ? 'text-green-400' : 'text-gray-400'}">
+                                    <p class="font-bold">${p.team1} ${p.result === 1 ? '🏆' : ''}</p>
+                                    <p class="text-sm">${votes1} voti</p>
+                                </div>
+                                <div class="text-center text-xl font-bold text-gray-500">VS</div>
+                                <div class="text-center ${p.result === 2 ? 'text-green-400' : 'text-gray-400'}">
+                                    <p class="font-bold">${p.team2} ${p.result === 2 ? '🏆' : ''}</p>
+                                    <p class="text-sm">${votes2} voti</p>
+                                </div>
+                            </div>
+                            
+                            <div class="flex justify-between items-center mt-3 pt-3 border-t border-gray-600">
+                                <p class="text-sm text-green-400">🏆 Vincitore: <strong>${winnerName}</strong></p>
+                                <button onclick="deletePronostico('${p.id}')" class="text-red-400 hover:text-red-300 text-sm">🗑️ Elimina</button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        function editPronostico(id) {
+            const prono = pronosticiCache.find(p => p.id === id);
+            if (!prono) return;
+            
+            editingPronoId = id;
+            document.getElementById('editPronoId').value = id;
+            document.getElementById('newPronoTeam1').value = prono.team1;
+            document.getElementById('newPronoTeam2').value = prono.team2;
+            document.getElementById('newPronoDate').value = prono.date;
+            document.getElementById('newPronoTime').value = prono.time;
+            
+            document.getElementById('pronoFormTitle').textContent = '✏️ Modifica Pronostico';
+            document.getElementById('pronoSubmitBtn').textContent = 'Salva Modifiche';
+            document.getElementById('pronoCancelBtn').classList.remove('hidden');
+            
+            // Scroll al form
+            document.getElementById('adminPronosticiTab').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function cancelPronoEdit() {
+            editingPronoId = null;
+            document.getElementById('editPronoId').value = '';
+            ['newPronoTeam1', 'newPronoTeam2', 'newPronoDate', 'newPronoTime'].forEach(id => document.getElementById(id).value = '');
+            
+            document.getElementById('pronoFormTitle').textContent = '➕ Nuovo Pronostico';
+            document.getElementById('pronoSubmitBtn').textContent = 'Crea Pronostico';
+            document.getElementById('pronoCancelBtn').classList.add('hidden');
+        }
+        
+        function deletePronostico(id) {
+            if (!confirm('Eliminare questo pronostico?')) return;
+            db.ref('pronostici/' + id).remove();
+        }
+        
+        function setPronoResult(id, winner, winnerName) {
+            if (!confirm(`Confermi che ha vinto ${winnerName}? Verranno assegnati +50 punti a chi ha indovinato.`)) return;
+            
+            const prono = pronosticiCache.find(p => p.id === id);
+            if (!prono) return;
+            
+            // Assegna punti a chi ha indovinato
+            if (prono.votes) {
+                Object.entries(prono.votes).forEach(([odieId, vote]) => {
+                    if (vote === winner) {
+                        // Trova l'utente e aggiungi punti
+                        const user = usersCache.find(u => u.id === odieId);
+                        if (user) {
+                            const newPoints = (user.points || 0) + 50;
+                            db.ref('users/' + odieId).update({ points: newPoints });
+                        }
+                    }
+                });
+            }
+            
+            // Segna il risultato
+            db.ref('pronostici/' + id).update({ result: winner });
+            alert(`Risultato registrato! +50 punti assegnati a chi ha votato ${winnerName}.`);
         }
 
         function loadMembersList() {

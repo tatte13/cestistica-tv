@@ -593,12 +593,23 @@
                 <!-- News Tab -->
                 <div id="adminNewsTab" class="space-y-6 hidden">
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg font-bold mb-4">➕ Nuova News</h3>
+                        <h3 class="text-lg font-bold mb-4" id="newsFormTitle">➕ Nuova News</h3>
+                        <input type="hidden" id="editNewsId">
                         <input type="text" id="newNewsTitle" placeholder="Titolo articolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
                         <textarea id="newNewsContent" placeholder="Contenuto articolo..." class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-32"></textarea>
-                        <input type="text" id="newNewsImage" placeholder="URL immagine principale (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
+                        
+                        <div class="mb-3">
+                            <label class="block text-sm text-gray-400 mb-2">📷 Carica Immagini (max 5)</label>
+                            <input type="file" id="newsImagesInput" accept="image/*" multiple class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <div id="newsImagesPreview" class="flex gap-2 mt-2 flex-wrap"></div>
+                        </div>
+                        
                         <input type="text" id="newNewsVideo" placeholder="URL video YouTube (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
-                        <button onclick="addNews()" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Pubblica News</button>
+                        
+                        <div class="flex gap-3">
+                            <button onclick="addNews()" id="newsSubmitBtn" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Pubblica News</button>
+                            <button onclick="cancelNewsEdit()" id="newsCancelBtn" class="bg-gray-600 px-6 py-3 rounded-lg font-semibold hidden">Annulla</button>
+                        </div>
                     </div>
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-bold mb-4">📰 Gestione News</h3>
@@ -755,6 +766,7 @@
                         newsCache.push({ id: child.key, ...child.val() });
                     });
                     updateAdminStats();
+                    if (currentUser && currentUser.isAdmin) loadAdminNewsList();
                 });
 
                 db.ref('pronostici').on('value', (snapshot) => {
@@ -1529,8 +1541,23 @@
                 }
             }
             
+            // Galleria immagini
+            let imagesGallery = '';
+            const images = news.images || (news.image ? [news.image] : []);
+            if (images.length > 0) {
+                if (images.length === 1) {
+                    imagesGallery = `<img src="${images[0]}" class="w-full h-64 md:h-96 object-cover rounded-xl mb-6">`;
+                } else {
+                    imagesGallery = `
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2 mb-6">
+                            ${images.map((img, i) => `<img src="${img}" class="w-full ${i === 0 ? 'col-span-2 md:col-span-2 h-64' : 'h-32'} object-cover rounded-xl cursor-pointer hover:opacity-80 transition" onclick="window.open('${img}', '_blank')">`).join('')}
+                        </div>
+                    `;
+                }
+            }
+            
             document.getElementById('articleContent').innerHTML = `
-                ${news.image ? `<img src="${news.image}" class="w-full h-64 md:h-96 object-cover rounded-xl mb-6">` : ''}
+                ${imagesGallery}
                 <h1 class="text-3xl md:text-4xl font-bold mb-4">${news.title}</h1>
                 <p class="text-gray-400 mb-6">${news.date}</p>
                 ${videoEmbed}
@@ -1713,6 +1740,7 @@
             document.getElementById('adminPage').classList.remove('hidden');
             showAdminTab('video');
             loadAdminVideoList();
+            loadAdminNewsList();
             loadMembersList();
             updateAdminStats();
         }
@@ -1799,19 +1827,152 @@
         }
 
         // News Admin
+        let newsImages = [];
+        let editingNewsId = null;
+        
+        document.getElementById('newsImagesInput')?.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files).slice(0, 5);
+            newsImages = [];
+            const preview = document.getElementById('newsImagesPreview');
+            preview.innerHTML = '';
+            
+            files.forEach((file, index) => {
+                if (file.size > 1000000) {
+                    alert('Immagine troppo grande (max 1MB per immagine)');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    // Comprimi l'immagine
+                    const img = new Image();
+                    img.onload = function() {
+                        const canvas = document.createElement('canvas');
+                        const maxSize = 800;
+                        let width = img.width;
+                        let height = img.height;
+                        if (width > maxSize || height > maxSize) {
+                            if (width > height) {
+                                height = (height / width) * maxSize;
+                                width = maxSize;
+                            } else {
+                                width = (width / height) * maxSize;
+                                height = maxSize;
+                            }
+                        }
+                        canvas.width = width;
+                        canvas.height = height;
+                        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                        const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+                        newsImages.push(dataUrl);
+                        
+                        // Mostra preview
+                        preview.innerHTML += `<img src="${dataUrl}" class="w-16 h-16 object-cover rounded">`;
+                    };
+                    img.src = e.target.result;
+                };
+                reader.readAsDataURL(file);
+            });
+        });
+        
         function addNews() {
             const title = document.getElementById('newNewsTitle').value.trim();
             const content = document.getElementById('newNewsContent').value.trim();
-            const image = document.getElementById('newNewsImage').value.trim();
             const video = document.getElementById('newNewsVideo').value.trim();
             
             if (!title || !content) return alert('Inserisci titolo e contenuto');
             
-            db.ref('news').push().set({
-                title, content, image, video,
+            const newsData = {
+                title, content, video,
+                images: newsImages,
+                image: newsImages[0] || '',
                 date: new Date().toLocaleDateString('it-IT')
-            });
-            ['newNewsTitle', 'newNewsContent', 'newNewsImage', 'newNewsVideo'].forEach(id => document.getElementById(id).value = '');
+            };
+            
+            if (editingNewsId) {
+                db.ref('news/' + editingNewsId).update(newsData);
+                cancelNewsEdit();
+            } else {
+                db.ref('news').push().set(newsData);
+            }
+            
+            // Reset form
+            document.getElementById('newNewsTitle').value = '';
+            document.getElementById('newNewsContent').value = '';
+            document.getElementById('newNewsVideo').value = '';
+            document.getElementById('newsImagesInput').value = '';
+            document.getElementById('newsImagesPreview').innerHTML = '';
+            newsImages = [];
+            
+            loadAdminNewsList();
+        }
+        
+        function loadAdminNewsList() {
+            const container = document.getElementById('adminNewsList');
+            if (!container) return;
+            
+            if (newsCache.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">Nessuna news</p>';
+                return;
+            }
+            
+            container.innerHTML = newsCache.map(n => `
+                <div class="flex flex-col md:flex-row md:items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="flex items-center gap-3 flex-1 min-w-0">
+                        ${n.image ? `<img src="${n.image}" class="w-16 h-12 object-cover rounded">` : '<div class="w-16 h-12 bg-green-600 rounded flex items-center justify-center">📰</div>'}
+                        <div class="min-w-0">
+                            <p class="font-medium truncate">${n.title}</p>
+                            <p class="text-sm text-gray-400">${n.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="editNews('${n.id}')" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm">✏️</button>
+                        <button onclick="deleteNews('${n.id}')" class="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function editNews(id) {
+            const news = newsCache.find(n => n.id === id);
+            if (!news) return;
+            
+            editingNewsId = id;
+            document.getElementById('editNewsId').value = id;
+            document.getElementById('newNewsTitle').value = news.title;
+            document.getElementById('newNewsContent').value = news.content;
+            document.getElementById('newNewsVideo').value = news.video || '';
+            
+            // Mostra immagini esistenti
+            newsImages = news.images || (news.image ? [news.image] : []);
+            const preview = document.getElementById('newsImagesPreview');
+            preview.innerHTML = newsImages.map(img => `<img src="${img}" class="w-16 h-16 object-cover rounded">`).join('');
+            
+            document.getElementById('newsFormTitle').textContent = '✏️ Modifica News';
+            document.getElementById('newsSubmitBtn').textContent = 'Salva Modifiche';
+            document.getElementById('newsCancelBtn').classList.remove('hidden');
+            
+            // Scroll to form
+            document.getElementById('adminNewsTab').scrollIntoView({ behavior: 'smooth' });
+        }
+        
+        function cancelNewsEdit() {
+            editingNewsId = null;
+            document.getElementById('editNewsId').value = '';
+            document.getElementById('newNewsTitle').value = '';
+            document.getElementById('newNewsContent').value = '';
+            document.getElementById('newNewsVideo').value = '';
+            document.getElementById('newsImagesInput').value = '';
+            document.getElementById('newsImagesPreview').innerHTML = '';
+            newsImages = [];
+            
+            document.getElementById('newsFormTitle').textContent = '➕ Nuova News';
+            document.getElementById('newsSubmitBtn').textContent = 'Pubblica News';
+            document.getElementById('newsCancelBtn').classList.add('hidden');
+        }
+        
+        function deleteNews(id) {
+            if (!confirm('Eliminare questa news?')) return;
+            db.ref('news/' + id).remove();
         }
 
         // Calendar Admin

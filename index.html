@@ -66,13 +66,13 @@
 <body class="bg-gray-900 text-white min-h-screen">
     
     <!-- Loading Overlay -->
-    <div id="loadingOverlay" class="loading-overlay">
+    <div id="loadingOverlay" class="loading-overlay" style="z-index: 9999;">
         <div class="loading-spinner"></div>
         <p class="text-green-400 font-medium">Caricamento Cestistica TV...</p>
     </div>
 
     <!-- Firebase Config Modal -->
-    <div id="firebaseConfigModal" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 hidden">
+    <div id="firebaseConfigModal" class="fixed inset-0 bg-black/95 flex items-center justify-center p-4 hidden" style="z-index: 10000;">
         <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-2xl w-full mx-4 border border-green-600/30 max-h-[90vh] overflow-y-auto">
             <div class="text-center mb-6">
                 <div class="text-5xl mb-4">🔥</div>
@@ -112,7 +112,7 @@
     </div>
 
     <!-- Login/Register Modal -->
-    <div id="authModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center overflow-y-auto py-8 hidden">
+    <div id="authModal" class="fixed inset-0 bg-black/90 flex items-center justify-center overflow-y-auto py-8 hidden" style="z-index: 10001;">
         <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-md w-full mx-4 border border-green-600/30">
             <div class="text-center mb-6">
                 <img id="authLogo" src="" alt="Cestistica TV" class="h-16 mx-auto mb-4 hidden">
@@ -538,7 +538,7 @@
         }
 
         function showFirebaseConfigModal() {
-            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('loadingOverlay').style.display = 'none';
             document.getElementById('firebaseConfigModal').classList.remove('hidden');
         }
 
@@ -568,7 +568,9 @@
         function useDemoMode() {
             isFirebaseMode = false;
             document.getElementById('firebaseConfigModal').classList.add('hidden');
+            document.getElementById('firebaseConfigModal').style.display = 'none';
             document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('loadingOverlay').style.display = 'none';
             
             // Init with localStorage
             if (!localStorage.getItem('cesticaVideos')) {
@@ -631,7 +633,9 @@
                 });
 
                 document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('loadingOverlay').style.display = 'none';
                 document.getElementById('firebaseConfigModal').classList.add('hidden');
+                document.getElementById('firebaseConfigModal').style.display = 'none';
                 document.getElementById('syncIndicator').classList.remove('hidden');
                 checkSession();
 

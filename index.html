@@ -7,12 +7,13 @@
     <meta name="description" content="Il club channel ufficiale della Cestistica Savonese">
     <meta name="theme-color" content="#228B22">
     <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="icon-192.png">
+    <link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect fill='%23228B22' width='100' height='100' rx='20'/><text y='70' x='50' text-anchor='middle' font-size='60'>🏀</text></svg>">
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
     <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
     <style>
         * { font-family: 'Poppins', sans-serif; }
         :root { --forest-green: #228B22; --light-forest: #3CB371; --dark-green: #1a6b1a; }
@@ -29,20 +30,17 @@
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
         .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease; }
         .mobile-menu.open { transform: translateX(0); }
-        .loading-overlay { position: fixed; inset: 0; background: #111; display: flex; align-items: center; justify-content: center; z-index: 9999; flex-direction: column; gap: 1rem; }
+        .loading-overlay { position: fixed; inset: 0; background: #111; display: flex; align-items: center; justify-content: center; z-index: 9999; }
         .loading-spinner { width: 50px; height: 50px; border: 4px solid #333; border-top-color: #228B22; border-radius: 50%; animation: spin 1s linear infinite; }
         @keyframes spin { to { transform: rotate(360deg); } }
-        .sync-indicator { position: fixed; bottom: 20px; left: 20px; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 50; display: flex; align-items: center; gap: 8px; }
+        .sync-indicator { position: fixed; bottom: 20px; left: 20px; padding: 8px 16px; border-radius: 20px; font-size: 12px; z-index: 50; }
         .sync-indicator.online { background: #22c55e; color: white; }
         .sync-indicator.offline { background: #ef4444; color: white; }
         #heroBackground { transition: opacity 0.5s ease, background-image 0.5s ease; }
-        .chat-container { height: 300px; overflow-y: auto; }
-        .badge { display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 600; }
-        .tab-btn { transition: all 0.3s; }
+        .tab-btn { padding: 10px 20px; border-radius: 8px; transition: all 0.3s; }
         .tab-btn.active { background: #228B22; color: white; }
-        .news-card img { transition: transform 0.3s; }
-        .news-card:hover img { transform: scale(1.05); }
-        .pwa-install { position: fixed; bottom: 80px; right: 20px; z-index: 100; }
+        .tab-btn:not(.active) { background: #374151; color: #9ca3af; }
+        .tab-btn:not(.active):hover { background: #4b5563; }
         @media (max-width: 768px) {
             .video-card { min-width: 160px !important; }
             .video-card img { height: 100px !important; }
@@ -52,23 +50,48 @@
             .hero-desc { font-size: 0.875rem !important; }
             .category-title { font-size: 1.25rem !important; }
         }
+        .biancoverdi-card {
+            background: linear-gradient(135deg, #1a6b1a 0%, #228B22 50%, #3CB371 100%);
+            border-radius: 16px;
+            padding: 24px;
+            position: relative;
+            overflow: hidden;
+        }
+        .biancoverdi-card::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            right: -50%;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
+        }
+        .qr-code { image-rendering: pixelated; }
     </style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     
     <div id="loadingOverlay" class="loading-overlay">
         <div class="loading-spinner"></div>
-        <p class="text-green-400 font-medium">Caricamento Cestistica TV...</p>
     </div>
 
-    <!-- PWA Install Button -->
-    <button id="pwaInstall" class="pwa-install hidden gradient-bg px-4 py-3 rounded-full shadow-lg flex items-center gap-2 hover:scale-105 transition">
-        📲 Installa App
-    </button>
+    <!-- Install PWA Banner -->
+    <div id="installBanner" class="fixed bottom-20 left-4 right-4 md:left-auto md:right-4 md:w-80 bg-green-700 p-4 rounded-xl shadow-2xl z-50 hidden">
+        <div class="flex items-center justify-between">
+            <div>
+                <p class="font-bold">📲 Installa Cestistica TV</p>
+                <p class="text-sm text-green-200">Aggiungi alla home</p>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="installPWA()" class="bg-white text-green-700 px-4 py-2 rounded-lg font-bold text-sm">Installa</button>
+                <button onclick="dismissInstall()" class="text-green-200 hover:text-white">✕</button>
+            </div>
+        </div>
+    </div>
 
     <!-- Auth Modal -->
     <div id="authModal" class="fixed inset-0 bg-black/90 flex items-center justify-center hidden" style="z-index: 10001;">
-        <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-md w-full mx-4 border border-green-600/30 max-h-[90vh] overflow-y-auto">
+        <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-md w-full mx-4 border border-green-600/30">
             <div class="text-center mb-6">
                 <img id="authLogo" src="" alt="Cestistica TV" class="h-16 mx-auto mb-4 hidden">
                 <div id="authLogoPlaceholder" class="text-5xl mb-2">🏀</div>
@@ -113,7 +136,7 @@
             <button onclick="showNews(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📰 News</button>
             <button onclick="showCalendar(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📅 Calendario</button>
             <button onclick="showPronostici(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎯 Pronostici</button>
-            <button onclick="showClassifica(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🏆 Classifica Tifosi</button>
+            <button onclick="showClassifica(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🏆 Classifica</button>
             <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">❤️ La Mia Lista</button>
             <hr class="border-gray-700 my-4">
             <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👤 Profilo</button>
@@ -123,44 +146,11 @@
         </nav>
     </div>
 
-    <!-- Share Modal -->
-    <div id="shareModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-gray-800 p-6 rounded-2xl max-w-sm w-full border border-green-600/30">
-            <div class="flex items-center justify-between mb-4">
-                <h3 class="text-xl font-bold flex items-center gap-2">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                    Condividi
-                </h3>
-                <button onclick="closeShareModal()" class="text-gray-400 hover:text-white">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-            <div class="grid grid-cols-4 gap-3">
-                <button onclick="shareWhatsApp()" class="flex flex-col items-center gap-2 p-4 bg-green-600 rounded-xl hover:bg-green-700 transition">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
-                    <span class="text-xs">WhatsApp</span>
-                </button>
-                <button onclick="shareFacebook()" class="flex flex-col items-center gap-2 p-4 bg-blue-600 rounded-xl hover:bg-blue-700 transition">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z"/></svg>
-                    <span class="text-xs">Facebook</span>
-                </button>
-                <button onclick="shareTwitter()" class="flex flex-col items-center gap-2 p-4 bg-gray-900 rounded-xl hover:bg-gray-950 transition">
-                    <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
-                    <span class="text-xs">X</span>
-                </button>
-                <button onclick="copyLink()" class="flex flex-col items-center gap-2 p-4 bg-gray-600 rounded-xl hover:bg-gray-700 transition">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3"></path></svg>
-                    <span class="text-xs">Copia</span>
-                </button>
-            </div>
-        </div>
-    </div>
-
     <!-- User Details Modal -->
     <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
         <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
             <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold">👤 Il Mio Profilo</h3>
+                <h3 class="text-xl font-bold">👤 Profilo</h3>
                 <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white">✕</button>
             </div>
             <div class="flex flex-col items-center mb-6">
@@ -176,60 +166,81 @@
                 <button onclick="document.getElementById('profilePhotoInput').click()" class="mt-3 text-sm text-green-400 hover:underline">📷 Cambia Foto</button>
                 <button onclick="removeProfilePhoto()" id="removePhotoBtn" class="mt-1 text-sm text-red-400 hover:underline hidden">🗑️ Rimuovi</button>
                 <p id="userFullName" class="font-semibold text-lg mt-3"></p>
-                <div id="userBadge" class="mt-2"></div>
-                <p class="text-green-400 text-sm mt-1">cestistica tv+ Member</p>
+                <p class="text-green-400 text-sm">cestistica tv+ Member</p>
             </div>
             <div class="bg-gray-700 rounded-lg p-4 space-y-3">
                 <div class="flex justify-between"><span class="text-gray-400">Username:</span><span id="userUsername" class="font-medium"></span></div>
                 <div class="flex justify-between"><span class="text-gray-400">Email:</span><span id="userEmail" class="font-medium"></span></div>
-                <div class="flex justify-between"><span class="text-gray-400">Biancoverdi Points:</span><span id="userPoints" class="font-medium text-yellow-400"></span></div>
                 <div class="flex justify-between"><span class="text-gray-400">Membro dal:</span><span id="userDate" class="font-medium"></span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Biancoverdi Points:</span><span id="userPoints" class="font-medium text-green-400">0 💚</span></div>
+                <div class="flex justify-between"><span class="text-gray-400">Badge:</span><span id="userBadge" class="font-medium"></span></div>
             </div>
-            
-            <!-- Biancoverdi Card -->
-            <div class="mt-6 p-4 bg-gradient-to-br from-green-800 via-green-700 to-green-900 rounded-xl border border-green-500/30">
-                <h4 class="text-center font-bold mb-3">🎫 Biancoverdi Card</h4>
-                <div id="memberCard" class="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-xl p-4 border-2 border-green-500 shadow-xl">
-                    <div class="flex items-center justify-between mb-3">
-                        <img id="cardLogo" src="" class="h-8 hidden">
-                        <span id="cardLogoEmoji" class="text-2xl">🏀</span>
-                        <span class="text-xs text-green-400 font-bold">CESTISTICA TV+</span>
-                    </div>
-                    <div class="flex gap-3 items-center mb-3">
-                        <div id="cardAvatar" class="w-14 h-14 bg-green-600 rounded-lg flex items-center justify-center text-xl font-bold overflow-hidden">
-                            <img id="cardAvatarImg" src="" class="w-full h-full object-cover hidden">
-                            <span id="cardAvatarInitial"></span>
-                        </div>
-                        <div class="flex-1">
-                            <p id="cardFullName" class="font-bold text-lg"></p>
-                            <p id="cardUsername" class="text-green-400 text-sm"></p>
-                        </div>
-                    </div>
-                    <div class="flex items-center justify-between text-xs">
-                        <div>
-                            <p class="text-gray-500">N° TESSERA</p>
-                            <p id="cardNumber" class="font-mono text-green-400"></p>
-                        </div>
-                        <div id="cardQR" class="w-16 h-16 bg-white p-1 rounded"></div>
-                    </div>
-                    <div class="mt-2 flex items-center justify-between">
-                        <span id="cardBadge" class="badge bg-green-600 text-xs"></span>
-                        <span id="cardDate" class="text-xs text-gray-500"></span>
-                    </div>
-                </div>
-                <button onclick="downloadCard()" class="w-full mt-4 bg-white/10 hover:bg-white/20 py-2 rounded-lg font-semibold text-sm transition flex items-center justify-center gap-2">
-                    📥 Scarica Card
+            <button onclick="closeUserDetails()" class="w-full mt-6 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Share Modal -->
+    <div id="shareModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl max-w-sm w-full border border-green-600/30">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">📤 Condividi</h3>
+                <button onclick="closeShareModal()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="grid grid-cols-2 gap-3">
+                <button onclick="shareWhatsApp()" class="flex items-center justify-center gap-2 bg-green-600 p-4 rounded-xl hover:bg-green-700 transition">
+                    <span class="text-2xl">📱</span> WhatsApp
+                </button>
+                <button onclick="shareFacebook()" class="flex items-center justify-center gap-2 bg-blue-600 p-4 rounded-xl hover:bg-blue-700 transition">
+                    <span class="text-2xl">📘</span> Facebook
+                </button>
+                <button onclick="shareTwitter()" class="flex items-center justify-center gap-2 bg-sky-500 p-4 rounded-xl hover:bg-sky-600 transition">
+                    <span class="text-2xl">🐦</span> Twitter
+                </button>
+                <button onclick="copyLink()" class="flex items-center justify-center gap-2 bg-gray-600 p-4 rounded-xl hover:bg-gray-700 transition">
+                    <span class="text-2xl">🔗</span> Copia Link
                 </button>
             </div>
-            
-            <button onclick="closeUserDetails()" class="w-full mt-6 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Points Info Modal -->
+    <div id="pointsInfoModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">💚 Biancoverdi Points</h3>
+                <button onclick="closePointsInfo()" class="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div class="mb-6">
+                <h4 class="font-semibold mb-3 text-green-400">⭐ Come Guadagnare Punti:</h4>
+                <div class="bg-gray-700 rounded-lg p-4 space-y-2 text-sm">
+                    <div class="flex justify-between"><span>🎬 Guarda un video</span><span class="text-green-400">+5</span></div>
+                    <div class="flex justify-between"><span>💬 Scrivi un commento</span><span class="text-green-400">+10</span></div>
+                    <div class="flex justify-between"><span>👍 Metti like</span><span class="text-green-400">+2</span></div>
+                    <div class="flex justify-between"><span>📝 Chat live</span><span class="text-green-400">+2</span></div>
+                    <div class="flex justify-between"><span>🎯 Vota un pronostico</span><span class="text-green-400">+5</span></div>
+                    <div class="flex justify-between"><span>✅ Pronostico corretto</span><span class="text-green-400">+50</span></div>
+                    <div class="flex justify-between"><span>🔐 Login giornaliero</span><span class="text-green-400">+3</span></div>
+                </div>
+            </div>
+            <div>
+                <h4 class="font-semibold mb-3 text-green-400">🏅 Badge Sbloccabili:</h4>
+                <div class="bg-gray-700 rounded-lg p-4 space-y-2 text-sm">
+                    <div class="flex justify-between"><span>🌱 Nuovo Arrivato</span><span>0 punti</span></div>
+                    <div class="flex justify-between"><span>👀 Spettatore</span><span>50 punti</span></div>
+                    <div class="flex justify-between"><span>🏀 Tifoso</span><span>150 punti</span></div>
+                    <div class="flex justify-between"><span>🔥 Super Tifoso</span><span>300 punti</span></div>
+                    <div class="flex justify-between"><span>💚 Ultras</span><span>500 punti</span></div>
+                    <div class="flex justify-between"><span>👑 Leggenda</span><span>1000 punti</span></div>
+                </div>
+            </div>
+            <button onclick="closePointsInfo()" class="w-full mt-6 gradient-bg py-3 rounded-lg font-semibold">Ho Capito!</button>
         </div>
     </div>
 
     <!-- Main App -->
     <div id="mainApp" class="hidden">
         <div id="syncIndicator" class="sync-indicator online">
-            <span class="w-2 h-2 bg-white rounded-full"></span>
+            <span class="w-2 h-2 bg-white rounded-full inline-block mr-2"></span>
             <span id="syncText">Sincronizzato</span>
         </div>
 
@@ -250,6 +261,7 @@
                     <button onclick="showCalendar()" class="hover:text-green-400 transition">Calendario</button>
                     <button onclick="showPronostici()" class="hover:text-green-400 transition">Pronostici</button>
                     <button onclick="showClassifica()" class="hover:text-green-400 transition">Classifica</button>
+                    <button onclick="showWatchlist()" class="hover:text-green-400 transition">La Mia Lista</button>
                 </nav>
                 
                 <div class="flex items-center gap-2 md:gap-4">
@@ -257,13 +269,12 @@
                         <input type="text" id="searchInput" placeholder="Cerca..." class="bg-gray-800 pl-10 pr-4 py-2 rounded-full text-sm w-40 border border-gray-700" onkeyup="searchVideos()">
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <button onclick="showWatchlist()" class="hidden md:flex items-center hover:text-green-400 transition">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
-                    </button>
                     <div class="relative group">
                         <button class="flex items-center gap-2 bg-green-600 px-3 py-2 rounded-full text-sm">
+                            <div id="headerUserPhoto" class="w-6 h-6 rounded-full bg-green-700 flex items-center justify-center overflow-hidden">
+                                <span id="headerUserInitial" class="text-xs font-bold"></span>
+                            </div>
                             <span id="currentUser" class="font-medium hidden md:inline"></span>
-                            <span id="currentUserMobile" class="font-medium md:hidden"></span>
                         </button>
                         <div class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl hidden group-hover:block border border-gray-700">
                             <button onclick="showUserDetails()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-t-lg">👤 Profilo</button>
@@ -339,45 +350,37 @@
                 <div class="grid lg:grid-cols-3 gap-8">
                     <div class="lg:col-span-2">
                         <div class="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
-                            <iframe id="videoPlayer" class="w-full h-full" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                            <iframe id="videoPlayer" src="" class="w-full h-full" style="border:none;" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"></iframe>
                         </div>
                         
                         <div class="mt-6">
-                            <div class="flex flex-wrap items-start justify-between gap-4">
-                                <div class="flex-1">
-                                    <h2 id="videoTitle" class="text-xl md:text-2xl font-bold"></h2>
-                                    <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-400">
-                                        <span id="videoViews" class="flex items-center gap-1">
-                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg>
-                                            0 visualizzazioni
-                                        </span>
-                                        <span id="videoCategory"></span>
-                                        <span id="videoDate"></span>
-                                    </div>
-                                </div>
-                                <div class="flex items-center gap-3">
-                                    <button onclick="toggleLike()" id="likeBtn" class="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-full hover:bg-gray-600 transition">
-                                        <svg id="likeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg>
-                                        <span id="likeCount">0</span>
-                                    </button>
-                                    <button onclick="openShareModal()" class="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-full hover:bg-gray-600 transition">
-                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
-                                        Condividi
-                                    </button>
-                                </div>
+                            <h2 id="videoTitle" class="text-xl md:text-2xl font-bold"></h2>
+                            <div class="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-400">
+                                <span id="videoCategory"></span>
+                                <span id="videoDate"></span>
+                                <span id="videoViews">0 visualizzazioni</span>
                             </div>
+                            
+                            <div class="flex gap-4 mt-4">
+                                <button onclick="toggleLike()" id="likeBtn" class="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+                                    <svg id="likeIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                    <span id="likeCount">0</span>
+                                </button>
+                                <button onclick="openShareModal()" class="flex items-center gap-2 bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600 transition">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z"></path></svg>
+                                    Condividi
+                                </button>
+                            </div>
+                            
                             <p id="videoDescription" class="text-gray-300 mt-4"></p>
                         </div>
 
-                        <!-- Live Chat (solo per video live) -->
-                        <div id="liveChatSection" class="mt-6 bg-gray-800 rounded-xl p-4 hidden">
-                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
-                                <span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span>
-                                💬 Chat Live
-                            </h3>
-                            <div id="liveChatMessages" class="chat-container bg-gray-900 rounded-lg p-3 mb-4 space-y-2"></div>
+                        <!-- Live Chat (solo per Live) -->
+                        <div id="liveChatSection" class="hidden mt-6 bg-gray-800 rounded-xl p-4">
+                            <h3 class="text-lg font-bold mb-4 flex items-center gap-2"><span class="w-2 h-2 bg-red-500 rounded-full animate-pulse"></span> Chat Live</h3>
+                            <div id="liveChatMessages" class="h-48 overflow-y-auto mb-4 space-y-2 bg-gray-900 rounded-lg p-3"></div>
                             <div class="flex gap-2">
-                                <input type="text" id="liveChatInput" placeholder="Scrivi un messaggio..." class="flex-1 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600" onkeypress="if(event.key==='Enter')sendLiveChat()">
+                                <input type="text" id="liveChatInput" placeholder="Scrivi un messaggio..." class="flex-1 bg-gray-700 px-4 py-2 rounded-lg text-sm border border-gray-600">
                                 <button onclick="sendLiveChat()" class="gradient-bg px-4 py-2 rounded-lg font-semibold">Invia</button>
                             </div>
                         </div>
@@ -404,7 +407,7 @@
         <!-- News Page -->
         <div id="newsPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
-                <h2 class="text-2xl md:text-3xl font-bold mb-6">📰 News & Articoli</h2>
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">📰 News</h2>
                 <div id="newsList" class="grid md:grid-cols-2 lg:grid-cols-3 gap-6"></div>
                 <p id="emptyNews" class="text-gray-400 text-center py-20 hidden">Nessuna news disponibile</p>
             </div>
@@ -414,7 +417,7 @@
         <div id="newsArticlePage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4 max-w-4xl">
                 <button onclick="showNews()" class="mb-4 flex items-center gap-2 text-green-400 hover:underline">← Torna alle News</button>
-                <article id="newsArticleContent"></article>
+                <article id="articleContent"></article>
             </div>
         </div>
 
@@ -423,12 +426,14 @@
             <div class="container mx-auto px-4">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6">📅 Calendario Partite</h2>
                 <div id="calendarContent" class="bg-gray-800 rounded-xl p-6">
-                    <p id="noCalendar" class="text-gray-400 text-center py-10">Nessun calendario disponibile</p>
-                    <canvas id="pdfCanvas" class="hidden max-w-full mx-auto"></canvas>
-                    <div id="pdfControls" class="hidden flex items-center justify-center gap-4 mt-4">
-                        <button onclick="prevPdfPage()" class="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600">◀ Prec</button>
-                        <span id="pdfPageInfo" class="text-gray-400"></span>
-                        <button onclick="nextPdfPage()" class="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600">Succ ▶</button>
+                    <p id="noCalendar" class="text-gray-400 text-center py-10">Nessun calendario caricato</p>
+                    <div id="calendarPdfViewer" class="hidden">
+                        <div class="flex justify-between items-center mb-4">
+                            <button onclick="prevPdfPage()" class="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600">← Precedente</button>
+                            <span id="pdfPageInfo">Pagina 1 di 1</span>
+                            <button onclick="nextPdfPage()" class="bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600">Successiva →</button>
+                        </div>
+                        <canvas id="pdfCanvas" class="w-full bg-white rounded-lg"></canvas>
                     </div>
                 </div>
             </div>
@@ -438,132 +443,21 @@
         <div id="pronosticiPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6">🎯 Pronostici</h2>
-                <p class="text-gray-400 mb-6">Vota il vincente e guadagna punti se indovini!</p>
-                <div id="pronosticiList" class="grid md:grid-cols-2 gap-6"></div>
-                <p id="emptyPronostici" class="text-gray-400 text-center py-20 hidden">Nessun pronostico disponibile</p>
+                <div id="pronosticiList" class="space-y-4"></div>
+                <p id="emptyPronostici" class="text-gray-400 text-center py-20 hidden">Nessun pronostico attivo</p>
             </div>
         </div>
 
-        <!-- Classifica Tifosi Page -->
+        <!-- Classifica Page -->
         <div id="classificaPage" class="hidden pt-20 pb-20">
-            <div class="container mx-auto px-4 max-w-2xl">
+            <div class="container mx-auto px-4">
                 <div class="flex items-center justify-between mb-6">
                     <h2 class="text-2xl md:text-3xl font-bold">🏆 Classifica Tifosi</h2>
-                    <button onclick="showPointsInfo()" class="w-8 h-8 bg-gray-700 hover:bg-gray-600 rounded-full flex items-center justify-center text-gray-300 hover:text-white transition" title="Come funzionano i Biancoverdi Points?">
+                    <button onclick="showPointsInfo()" class="w-10 h-10 rounded-full bg-gray-700 hover:bg-gray-600 flex items-center justify-center transition" title="Come funzionano i punti?">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                     </button>
                 </div>
                 <div id="classificaList" class="space-y-3"></div>
-            </div>
-        </div>
-
-        <!-- Points Info Modal -->
-        <div id="pointsInfoModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
-            <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="text-xl font-bold text-green-400">💚 Biancoverdi Points</h3>
-                    <button onclick="closePointsInfo()" class="text-gray-400 hover:text-white">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                    </button>
-                </div>
-                
-                <p class="text-gray-300 mb-4">Guadagna punti partecipando attivamente alla community biancoverde!</p>
-                
-                <h4 class="font-semibold text-white mb-2">⭐ Come Guadagnare Punti</h4>
-                <div class="bg-gray-700 rounded-lg p-3 mb-4 space-y-2 text-sm">
-                    <div class="flex justify-between"><span class="text-gray-300">🎬 Guarda un video</span><span class="text-green-400 font-bold">+5</span></div>
-                    <div class="flex justify-between"><span class="text-gray-300">💬 Scrivi un commento</span><span class="text-green-400 font-bold">+10</span></div>
-                    <div class="flex justify-between"><span class="text-gray-300">👍 Metti like</span><span class="text-green-400 font-bold">+2</span></div>
-                    <div class="flex justify-between"><span class="text-gray-300">📝 Chat live</span><span class="text-green-400 font-bold">+2</span></div>
-                    <div class="flex justify-between"><span class="text-gray-300">🎯 Vota un pronostico</span><span class="text-green-400 font-bold">+5</span></div>
-                    <div class="flex justify-between"><span class="text-gray-300">✅ Pronostico corretto</span><span class="text-green-400 font-bold">+50</span></div>
-                    <div class="flex justify-between"><span class="text-gray-300">🔐 Login giornaliero</span><span class="text-green-400 font-bold">+3</span></div>
-                </div>
-                
-                <h4 class="font-semibold text-white mb-2">🏅 Badge Sbloccabili</h4>
-                <div class="bg-gray-700 rounded-lg p-3 space-y-2 text-sm">
-                    <div class="flex justify-between items-center"><span class="text-gray-300">🌱 Nuovo Arrivato</span><span class="text-gray-400">0 punti</span></div>
-                    <div class="flex justify-between items-center"><span class="text-gray-300">👀 Spettatore</span><span class="text-gray-400">50 punti</span></div>
-                    <div class="flex justify-between items-center"><span class="text-gray-300">🏀 Tifoso</span><span class="text-gray-400">150 punti</span></div>
-                    <div class="flex justify-between items-center"><span class="text-gray-300">🔥 Super Tifoso</span><span class="text-gray-400">300 punti</span></div>
-                    <div class="flex justify-between items-center"><span class="text-gray-300">💚 Ultras</span><span class="text-gray-400">500 punti</span></div>
-                    <div class="flex justify-between items-center"><span class="text-gray-300">👑 Leggenda</span><span class="text-yellow-400 font-bold">1000 punti</span></div>
-                </div>
-                
-                <button onclick="closePointsInfo()" class="w-full mt-6 gradient-bg py-3 rounded-lg font-semibold hover:opacity-90 transition">Ho Capito!</button>
-            </div>
-        </div>
-
-        <!-- Biancoverdi Card Page -->
-        <div id="biancoverdiCardPage" class="hidden pt-20 pb-20">
-            <div class="container mx-auto px-4 max-w-lg">
-                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center">🎫 Biancoverdi Card</h2>
-                <p class="text-gray-400 text-center mb-6">La tua tessera digitale del tifoso biancoverde</p>
-                
-                <!-- Card Preview -->
-                <div id="cardPageContainer" class="bg-gradient-to-br from-green-800 via-green-700 to-green-900 rounded-2xl p-6 border border-green-500/30 shadow-2xl">
-                    <div id="memberCardPage" class="bg-gradient-to-br from-gray-900 via-gray-800 to-black rounded-xl p-5 border-2 border-green-500 shadow-xl">
-                        <div class="flex items-center justify-between mb-4">
-                            <img id="cardLogoPage" src="" class="h-10 hidden">
-                            <span id="cardLogoEmojiPage" class="text-3xl">🏀</span>
-                            <span class="text-sm text-green-400 font-bold tracking-wider">CESTISTICA TV+</span>
-                        </div>
-                        <div class="flex gap-4 items-center mb-4">
-                            <div id="cardAvatarPage" class="w-16 h-16 bg-green-600 rounded-xl flex items-center justify-center text-2xl font-bold overflow-hidden shadow-lg">
-                                <img id="cardAvatarImgPage" src="" class="w-full h-full object-cover hidden">
-                                <span id="cardAvatarInitialPage"></span>
-                            </div>
-                            <div class="flex-1">
-                                <p id="cardFullNamePage" class="font-bold text-xl"></p>
-                                <p id="cardUsernamePage" class="text-green-400"></p>
-                            </div>
-                        </div>
-                        <div class="flex items-end justify-between">
-                            <div>
-                                <p class="text-gray-500 text-xs uppercase tracking-wider">N° Tessera</p>
-                                <p id="cardNumberPage" class="font-mono text-green-400 text-lg"></p>
-                                <div class="mt-2">
-                                    <span id="cardBadgePage" class="badge bg-green-600 text-sm px-3 py-1"></span>
-                                </div>
-                                <p id="cardDatePage" class="text-xs text-gray-500 mt-2"></p>
-                            </div>
-                            <div id="cardQRPage" class="w-20 h-20 bg-white p-1.5 rounded-lg shadow-lg"></div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Action Buttons -->
-                <div class="mt-6 space-y-3">
-                    <button onclick="downloadCardPage()" class="w-full bg-green-600 hover:bg-green-700 py-4 rounded-xl font-semibold transition flex items-center justify-center gap-3">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
-                        Scarica Card
-                    </button>
-                    
-                    <button onclick="addToGoogleWallet()" class="w-full bg-white text-gray-900 hover:bg-gray-100 py-4 rounded-xl font-semibold transition flex items-center justify-center gap-3">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"/></svg>
-                        Aggiungi a Google Wallet
-                    </button>
-                    
-                    <button onclick="addToAppleWallet()" class="w-full bg-black hover:bg-gray-900 py-4 rounded-xl font-semibold transition flex items-center justify-center gap-3 border border-gray-700">
-                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
-                        Aggiungi a Apple Wallet
-                    </button>
-                </div>
-
-                <!-- Card Info -->
-                <div class="mt-8 bg-gray-800 rounded-xl p-5">
-                    <h3 class="font-bold mb-4 flex items-center gap-2">ℹ️ Informazioni Card</h3>
-                    <div class="space-y-3 text-sm">
-                        <div class="flex justify-between"><span class="text-gray-400">Titolare:</span><span id="infoFullName" class="font-medium"></span></div>
-                        <div class="flex justify-between"><span class="text-gray-400">Username:</span><span id="infoUsername" class="font-medium text-green-400"></span></div>
-                        <div class="flex justify-between"><span class="text-gray-400">N° Tessera:</span><span id="infoCardNumber" class="font-mono"></span></div>
-                        <div class="flex justify-between"><span class="text-gray-400">Livello:</span><span id="infoBadge"></span></div>
-                        <div class="flex justify-between"><span class="text-gray-400">Biancoverdi Points:</span><span id="infoPoints" class="text-yellow-400 font-bold"></span></div>
-                        <div class="flex justify-between"><span class="text-gray-400">Membro dal:</span><span id="infoDate"></span></div>
-                    </div>
-                </div>
-
-                <p class="text-center text-gray-500 text-xs mt-6">Mostra questa card per accedere a eventi e promozioni esclusive</p>
             </div>
         </div>
 
@@ -576,12 +470,72 @@
             </div>
         </div>
 
+        <!-- Biancoverdi Card Page -->
+        <div id="biancoverdiCardPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4 max-w-md">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6 text-center">🎫 Biancoverdi Card</h2>
+                
+                <div id="cardContainer" class="biancoverdi-card mb-6">
+                    <div class="flex items-start justify-between mb-4">
+                        <div class="flex items-center gap-2">
+                            <img id="cardLogo" src="" class="h-10 hidden">
+                            <span id="cardLogoEmoji" class="text-3xl">🏀</span>
+                        </div>
+                        <span class="text-sm font-bold opacity-80">CESTISTICA TV+</span>
+                    </div>
+                    
+                    <div class="flex items-center gap-4 mb-4">
+                        <div id="cardAvatar" class="w-20 h-20 bg-white/20 rounded-full flex items-center justify-center text-2xl font-bold overflow-hidden">
+                            <img id="cardAvatarImg" src="" class="w-full h-full object-cover hidden">
+                            <span id="cardAvatarInitial" class="text-white"></span>
+                        </div>
+                        <div>
+                            <p id="cardFullName" class="font-bold text-lg"></p>
+                            <p id="cardUsername" class="text-green-200 text-sm"></p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-end">
+                        <div>
+                            <p class="text-xs opacity-70">TESSERA N°</p>
+                            <p id="cardNumber" class="font-mono font-bold"></p>
+                            <p id="cardBadge" class="text-sm mt-1"></p>
+                        </div>
+                        <div id="qrCode" class="w-20 h-20 bg-white rounded-lg p-1">
+                            <canvas id="qrCanvas" class="w-full h-full qr-code"></canvas>
+                        </div>
+                    </div>
+                    
+                    <div class="mt-4 pt-4 border-t border-white/20 flex justify-between text-xs opacity-70">
+                        <span>MEMBRO DAL</span>
+                        <span id="cardDate"></span>
+                    </div>
+                </div>
+                
+                <div class="space-y-3">
+                    <button onclick="downloadCard()" class="w-full bg-gray-700 py-3 rounded-lg font-semibold hover:bg-gray-600 transition flex items-center justify-center gap-2">
+                        📥 Scarica Card
+                    </button>
+                    <button onclick="addToGoogleWallet()" class="w-full bg-white text-gray-900 py-3 rounded-lg font-semibold hover:bg-gray-200 transition flex items-center justify-center gap-2">
+                        <img src="https://www.gstatic.com/instantbuy/svg/dark_gpay.svg" class="h-6" alt="Google Pay">
+                        Aggiungi a Google Wallet
+                    </button>
+                    <button onclick="addToAppleWallet()" class="w-full bg-black py-3 rounded-lg font-semibold hover:bg-gray-900 transition flex items-center justify-center gap-2 border border-gray-700">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="currentColor"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.73-.83 1.94-1.46 2.94-1.5.13 1.17-.34 2.35-1.04 3.19-.69.85-1.83 1.51-2.95 1.42-.15-1.15.41-2.35 1.05-3.11z"/></svg>
+                        Aggiungi a Apple Wallet
+                    </button>
+                </div>
+                
+                <p class="text-center text-gray-500 text-xs mt-4">La tua tessera digitale del mondo biancoverde</p>
+            </div>
+        </div>
+
         <!-- Admin Page -->
         <div id="adminPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6">⚙️ Pannello Admin</h2>
                 
-                <!-- Stats Dashboard -->
+                <!-- Stats -->
                 <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
                     <div class="bg-gray-800 rounded-xl p-4 text-center">
                         <p class="text-3xl font-bold text-green-400" id="statVideos">0</p>
@@ -600,20 +554,20 @@
                         <p class="text-gray-400 text-sm">News</p>
                     </div>
                 </div>
-
-                <!-- Admin Tabs -->
+                
+                <!-- Tabs -->
                 <div class="flex flex-wrap gap-2 mb-6">
-                    <button onclick="showAdminTab('videos')" class="tab-btn active px-4 py-2 rounded-lg bg-gray-700" data-tab="videos">📹 Video</button>
-                    <button onclick="showAdminTab('news')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="news">📰 News</button>
-                    <button onclick="showAdminTab('calendar')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="calendar">📅 Calendario</button>
-                    <button onclick="showAdminTab('pronostici')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="pronostici">🎯 Pronostici</button>
-                    <button onclick="showAdminTab('users')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="users">👥 Utenti</button>
-                    <button onclick="showAdminTab('settings')" class="tab-btn px-4 py-2 rounded-lg bg-gray-700" data-tab="settings">🖼️ Logo</button>
+                    <button onclick="showAdminTab('video')" class="tab-btn active" id="tabVideo">📹 Video</button>
+                    <button onclick="showAdminTab('news')" class="tab-btn" id="tabNews">📰 News</button>
+                    <button onclick="showAdminTab('calendar')" class="tab-btn" id="tabCalendar">📅 Calendario</button>
+                    <button onclick="showAdminTab('pronostici')" class="tab-btn" id="tabPronostici">🎯 Pronostici</button>
+                    <button onclick="showAdminTab('users')" class="tab-btn" id="tabUsers">👥 Utenti</button>
+                    <button onclick="showAdminTab('logo')" class="tab-btn" id="tabLogo">🖼️ Logo</button>
                 </div>
 
-                <!-- Videos Tab -->
-                <div id="adminVideosTab" class="admin-tab">
-                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                <!-- Video Tab -->
+                <div id="adminVideoTab" class="space-y-6">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-bold mb-4">➕ Aggiungi Video</h3>
                         <div class="grid md:grid-cols-2 gap-4">
                             <input type="text" id="newVideoTitle" placeholder="Titolo video" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
@@ -629,6 +583,7 @@
                         <textarea id="newVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mt-4 border border-gray-600 h-20"></textarea>
                         <button onclick="addVideo()" class="mt-4 gradient-bg px-6 py-3 rounded-lg font-semibold">Aggiungi Video</button>
                     </div>
+
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-bold mb-4">📹 Gestione Video</h3>
                         <div id="adminVideoList" class="space-y-3 max-h-96 overflow-y-auto"></div>
@@ -636,16 +591,13 @@
                 </div>
 
                 <!-- News Tab -->
-                <div id="adminNewsTab" class="admin-tab hidden">
-                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
-                        <h3 class="text-lg font-bold mb-4">➕ Aggiungi News</h3>
-                        <input type="text" id="newNewsTitle" placeholder="Titolo articolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
-                        <textarea id="newNewsContent" placeholder="Contenuto dell'articolo..." class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 h-40 mb-4"></textarea>
-                        <input type="text" id="newNewsVideo" placeholder="URL Video YouTube (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
-                        <div class="mb-4">
-                            <label class="block text-gray-400 mb-2">📷 Immagini (max 5)</label>
-                            <input type="file" id="newNewsImages" accept="image/*" multiple class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
-                        </div>
+                <div id="adminNewsTab" class="space-y-6 hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">➕ Nuova News</h3>
+                        <input type="text" id="newNewsTitle" placeholder="Titolo articolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
+                        <textarea id="newNewsContent" placeholder="Contenuto articolo..." class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-32"></textarea>
+                        <input type="text" id="newNewsImage" placeholder="URL immagine principale (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
+                        <input type="text" id="newNewsVideo" placeholder="URL video YouTube (opzionale)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600">
                         <button onclick="addNews()" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Pubblica News</button>
                     </div>
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
@@ -655,43 +607,52 @@
                 </div>
 
                 <!-- Calendar Tab -->
-                <div id="adminCalendarTab" class="admin-tab hidden">
-                    <div class="bg-gray-800 rounded-xl p-6">
-                        <h3 class="text-lg font-bold mb-4">📅 Carica Calendario (PDF)</h3>
-                        <input type="file" id="calendarPdf" accept="application/pdf" onchange="uploadCalendar(event)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
-                        <p class="text-gray-400 text-sm">Carica un file PDF con il calendario delle partite</p>
-                        <button onclick="removeCalendar()" class="mt-4 bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700">🗑️ Rimuovi Calendario</button>
+                <div id="adminCalendarTab" class="hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">📅 Carica Calendario PDF</h3>
+                        <div class="border-2 border-dashed border-gray-600 rounded-xl p-8 text-center">
+                            <p class="text-gray-400 mb-4">Carica un file PDF con il calendario delle partite</p>
+                            <label class="gradient-bg px-6 py-3 rounded-lg cursor-pointer hover:opacity-90 inline-block">
+                                📤 Seleziona PDF
+                                <input type="file" accept=".pdf" onchange="uploadCalendarPdf(event)" class="hidden">
+                            </label>
+                        </div>
+                        <div id="currentCalendarInfo" class="mt-4 hidden">
+                            <p class="text-green-400">✅ Calendario caricato</p>
+                            <button onclick="removeCalendar()" class="mt-2 text-red-400 hover:underline">🗑️ Rimuovi calendario</button>
+                        </div>
                     </div>
                 </div>
 
                 <!-- Pronostici Tab -->
-                <div id="adminPronosticiTab" class="admin-tab hidden">
-                    <div class="bg-gray-800 rounded-xl p-6 mb-6">
-                        <h3 class="text-lg font-bold mb-4">➕ Crea Pronostico</h3>
-                        <div class="grid md:grid-cols-2 gap-4 mb-4">
-                            <input type="text" id="pronoTeam1" placeholder="Squadra 1 (Casa)" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
-                            <input type="text" id="pronoTeam2" placeholder="Squadra 2 (Ospite)" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                <div id="adminPronosticiTab" class="space-y-6 hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">➕ Nuovo Pronostico</h3>
+                        <div class="grid md:grid-cols-2 gap-4">
+                            <input type="text" id="newPronoTeam1" placeholder="Squadra 1" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <input type="text" id="newPronoTeam2" placeholder="Squadra 2" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <input type="date" id="newPronoDate" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <input type="time" id="newPronoTime" class="bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
                         </div>
-                        <input type="datetime-local" id="pronoDate" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 mb-4">
-                        <button onclick="addPronostico()" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Crea Pronostico</button>
+                        <button onclick="addPronostico()" class="mt-4 gradient-bg px-6 py-3 rounded-lg font-semibold">Crea Pronostico</button>
                     </div>
-                    <div class="bg-gray-800 rounded-xl p-6">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-bold mb-4">🎯 Gestione Pronostici</h3>
                         <div id="adminPronosticiList" class="space-y-3 max-h-96 overflow-y-auto"></div>
                     </div>
                 </div>
 
                 <!-- Users Tab -->
-                <div id="adminUsersTab" class="admin-tab hidden">
-                    <div class="bg-gray-800 rounded-xl p-6">
+                <div id="adminUsersTab" class="hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-bold mb-4">👥 Membri Registrati</h3>
                         <div id="membersList" class="space-y-3 max-h-96 overflow-y-auto"></div>
                     </div>
                 </div>
 
-                <!-- Settings Tab -->
-                <div id="adminSettingsTab" class="admin-tab hidden">
-                    <div class="bg-gray-800 rounded-xl p-6">
+                <!-- Logo Tab -->
+                <div id="adminLogoTab" class="hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
                         <h3 class="text-lg font-bold mb-4">🖼️ Logo Sito</h3>
                         <div class="flex flex-col items-center gap-4">
                             <img id="logoPreview" src="" class="h-20 hidden">
@@ -758,49 +719,8 @@
         let heroSlideIndex = 0;
         let heroInterval = null;
         let pdfDoc = null;
-        let pdfPage = 1;
+        let pdfPageNum = 1;
         let deferredPrompt = null;
-
-        // PWA Install
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            document.getElementById('pwaInstall').classList.remove('hidden');
-        });
-
-        document.getElementById('pwaInstall').addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                deferredPrompt = null;
-                document.getElementById('pwaInstall').classList.add('hidden');
-            }
-        });
-
-        // Badge System
-        const badges = [
-            { name: 'Nuovo Arrivato', emoji: '🌱', points: 0 },
-            { name: 'Spettatore', emoji: '👀', points: 50 },
-            { name: 'Tifoso', emoji: '🏀', points: 150 },
-            { name: 'Super Tifoso', emoji: '🔥', points: 300 },
-            { name: 'Ultras', emoji: '💚', points: 500 },
-            { name: 'Leggenda', emoji: '👑', points: 1000 }
-        ];
-
-        function getUserBadge(points) {
-            let badge = badges[0];
-            for (const b of badges) {
-                if (points >= b.points) badge = b;
-            }
-            return badge;
-        }
-
-        function addPoints(amount) {
-            if (!currentUser) return;
-            currentUser.points = (currentUser.points || 0) + amount;
-            db.ref('users/' + currentUser.id).update({ points: currentUser.points });
-            localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
-        }
 
         // Initialize Firebase
         function initFirebase() {
@@ -826,6 +746,7 @@
                         usersCache.push({ id: child.key, ...child.val() });
                     });
                     if (currentUser && currentUser.isAdmin) loadMembersList();
+                    updateAdminStats();
                 });
 
                 db.ref('news').on('value', (snapshot) => {
@@ -845,6 +766,12 @@
 
                 db.ref('settings/logo').on('value', (snapshot) => {
                     applyLogo(snapshot.val());
+                });
+
+                db.ref('settings/calendar').on('value', (snapshot) => {
+                    if (snapshot.val()) {
+                        document.getElementById('currentCalendarInfo').classList.remove('hidden');
+                    }
                 });
 
                 db.ref('.info/connected').on('value', (snapshot) => {
@@ -867,11 +794,40 @@
             text.textContent = online ? 'Sincronizzato' : 'Offline';
         }
 
+        // PWA Install
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            document.getElementById('installBanner').classList.remove('hidden');
+        });
+
+        function installPWA() {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choice) => {
+                    deferredPrompt = null;
+                    document.getElementById('installBanner').classList.add('hidden');
+                });
+            }
+        }
+
+        function dismissInstall() {
+            document.getElementById('installBanner').classList.add('hidden');
+        }
+
         // Auth Functions
         function checkAuth() {
             const saved = localStorage.getItem('cesticaUser');
             if (saved) {
                 currentUser = JSON.parse(saved);
+                // Daily login bonus
+                const today = new Date().toDateString();
+                if (currentUser.lastLogin !== today) {
+                    addPoints(3);
+                    currentUser.lastLogin = today;
+                    db.ref('users/' + currentUser.id).update({ lastLogin: today });
+                    localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                }
                 showMainApp();
             } else {
                 document.getElementById('authModal').classList.remove('hidden');
@@ -888,7 +844,6 @@
             if (user) {
                 currentUser = user;
                 localStorage.setItem('cesticaUser', JSON.stringify(user));
-                addPoints(3); // Daily login bonus
                 showMainApp();
             } else {
                 showAuthError('Username o password errati');
@@ -905,13 +860,12 @@
             if (!nome || !cognome || !username || !email || !password) return showAuthError('Compila tutti i campi');
             if (usersCache.find(u => u.username === username)) return showAuthError('Username già in uso');
 
-            const newUser = { nome, cognome, username, email, password, isAdmin: false, points: 10, date: new Date().toLocaleDateString('it-IT') };
+            const newUser = { nome, cognome, username, email, password, isAdmin: false, points: 0, date: new Date().toLocaleDateString('it-IT') };
             const newRef = db.ref('users').push();
             newUser.id = newRef.key;
             newRef.set(newUser).then(() => {
                 currentUser = newUser;
                 localStorage.setItem('cesticaUser', JSON.stringify(newUser));
-                showNotification('🎉 Benvenuto nel mondo biancoverde!');
                 showMainApp();
             });
         }
@@ -943,7 +897,12 @@
             document.getElementById('authModal').classList.add('hidden');
             document.getElementById('mainApp').classList.remove('hidden');
             document.getElementById('currentUser').textContent = currentUser.username;
-            document.getElementById('currentUserMobile').textContent = currentUser.username.charAt(0).toUpperCase();
+            document.getElementById('headerUserInitial').textContent = currentUser.username.charAt(0).toUpperCase();
+            
+            // Update header photo
+            if (currentUser.profilePhoto) {
+                document.getElementById('headerUserPhoto').innerHTML = `<img src="${currentUser.profilePhoto}" class="w-full h-full object-cover">`;
+            }
             
             if (currentUser.isAdmin) {
                 document.getElementById('adminBtn').classList.remove('hidden');
@@ -952,6 +911,23 @@
             
             loadVideos();
             initHeroCarousel();
+        }
+
+        // Points System
+        function addPoints(points) {
+            if (!currentUser) return;
+            currentUser.points = (currentUser.points || 0) + points;
+            db.ref('users/' + currentUser.id).update({ points: currentUser.points });
+            localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+        }
+
+        function getBadge(points) {
+            if (points >= 1000) return '👑 Leggenda';
+            if (points >= 500) return '💚 Ultras';
+            if (points >= 300) return '🔥 Super Tifoso';
+            if (points >= 150) return '🏀 Tifoso';
+            if (points >= 50) return '👀 Spettatore';
+            return '🌱 Nuovo Arrivato';
         }
 
         // User Details
@@ -972,17 +948,13 @@
                 removeBtn.classList.add('hidden');
             }
             
-            const badge = getUserBadge(currentUser.points || 0);
-            document.getElementById('userBadge').innerHTML = `<span class="badge bg-green-600">${badge.emoji} ${badge.name}</span>`;
             document.getElementById('userFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
             document.getElementById('userUsername').textContent = currentUser.username;
             document.getElementById('userEmail').textContent = currentUser.email;
-            document.getElementById('userPoints').textContent = `${currentUser.points || 0} ⭐`;
             document.getElementById('userDate').textContent = currentUser.date;
+            document.getElementById('userPoints').textContent = (currentUser.points || 0) + ' 💚';
+            document.getElementById('userBadge').textContent = getBadge(currentUser.points || 0);
             document.getElementById('userDetailsModal').classList.remove('hidden');
-            
-            // Update Biancoverdi Card
-            updateCardDisplay();
         }
 
         function closeUserDetails() {
@@ -991,7 +963,7 @@
 
         function uploadProfilePhoto(event) {
             const file = event.target.files[0];
-            if (!file || file.size > 500000) return showNotification('⚠️ Immagine troppo grande (max 500KB)');
+            if (!file || file.size > 500000) return alert('Immagine troppo grande (max 500KB)');
 
             const reader = new FileReader();
             reader.onload = function(e) {
@@ -1008,7 +980,9 @@
                     db.ref('users/' + currentUser.id).update({ profilePhoto: dataUrl });
                     localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
                     showUserDetails();
-                    showNotification('📷 Foto aggiornata!');
+                    
+                    // Update header photo
+                    document.getElementById('headerUserPhoto').innerHTML = `<img src="${dataUrl}" class="w-full h-full object-cover">`;
                 };
                 img.src = e.target.result;
             };
@@ -1020,6 +994,94 @@
             db.ref('users/' + currentUser.id).update({ profilePhoto: null });
             localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
             showUserDetails();
+            document.getElementById('headerUserPhoto').innerHTML = `<span id="headerUserInitial" class="text-xs font-bold">${currentUser.username.charAt(0).toUpperCase()}</span>`;
+        }
+
+        // Biancoverdi Card
+        function showBiancoverdiCard() {
+            hideAllPages();
+            document.getElementById('biancoverdiCardPage').classList.remove('hidden');
+            updateCardDisplay();
+        }
+
+        function updateCardDisplay() {
+            // Logo
+            const logo = document.getElementById('cardLogo');
+            const emoji = document.getElementById('cardLogoEmoji');
+            const headerLogo = document.getElementById('headerLogo');
+            if (headerLogo.src && !headerLogo.classList.contains('hidden')) {
+                logo.src = headerLogo.src;
+                logo.classList.remove('hidden');
+                emoji.classList.add('hidden');
+            }
+            
+            // Avatar
+            const avatarImg = document.getElementById('cardAvatarImg');
+            const avatarInitial = document.getElementById('cardAvatarInitial');
+            if (currentUser.profilePhoto) {
+                avatarImg.src = currentUser.profilePhoto;
+                avatarImg.classList.remove('hidden');
+                avatarInitial.classList.add('hidden');
+            } else {
+                avatarImg.classList.add('hidden');
+                avatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
+                avatarInitial.classList.remove('hidden');
+            }
+            
+            document.getElementById('cardFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
+            document.getElementById('cardUsername').textContent = '@' + currentUser.username;
+            document.getElementById('cardNumber').textContent = generateCardNumber(currentUser.id);
+            document.getElementById('cardBadge').textContent = getBadge(currentUser.points || 0);
+            document.getElementById('cardDate').textContent = currentUser.date;
+            
+            generateQRCode(currentUser.id);
+        }
+
+        function generateCardNumber(id) {
+            const hash = id.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+            const num = Math.abs(hash).toString().padStart(6, '0').slice(0, 6);
+            return 'BV-' + num + '-2024';
+        }
+
+        function generateQRCode(data) {
+            const canvas = document.getElementById('qrCanvas');
+            const ctx = canvas.getContext('2d');
+            const size = 80;
+            canvas.width = size;
+            canvas.height = size;
+            
+            // Simple QR-like pattern
+            ctx.fillStyle = 'white';
+            ctx.fillRect(0, 0, size, size);
+            ctx.fillStyle = 'black';
+            
+            const cellSize = size / 10;
+            const hash = data.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
+            
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    if ((hash >> (i + j)) & 1 || (i < 2 && j < 2) || (i >= 8 && j < 2) || (i < 2 && j >= 8)) {
+                        ctx.fillRect(i * cellSize, j * cellSize, cellSize, cellSize);
+                    }
+                }
+            }
+        }
+
+        function downloadCard() {
+            html2canvas(document.getElementById('cardContainer'), { scale: 2 }).then(canvas => {
+                const link = document.createElement('a');
+                link.download = 'biancoverdi-card.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        }
+
+        function addToGoogleWallet() {
+            alert('Funzionalità Google Wallet in arrivo! Per ora puoi scaricare la card come immagine.');
+        }
+
+        function addToAppleWallet() {
+            alert('Funzionalità Apple Wallet in arrivo! Per ora puoi scaricare la card come immagine.');
         }
 
         // Mobile Menu
@@ -1036,7 +1098,13 @@
         // YouTube Helpers
         function extractYouTubeId(url) {
             if (!url) return null;
-            const patterns = [/youtube\.com\/watch\?v=([^&]+)/, /youtu\.be\/([^?]+)/, /youtube\.com\/live\/([^?]+)/, /youtube\.com\/embed\/([^?]+)/];
+            const patterns = [
+                /youtube\.com\/watch\?v=([^&]+)/,
+                /youtu\.be\/([^?]+)/,
+                /youtube\.com\/live\/([^?]+)/,
+                /youtube\.com\/embed\/([^?]+)/,
+                /youtube\.com\/shorts\/([^?]+)/
+            ];
             for (const pattern of patterns) {
                 const match = url.match(pattern);
                 if (match) return match[1];
@@ -1052,11 +1120,28 @@
 
         function extractDateTimeFromDescription(desc) {
             if (!desc) return null;
-            const dateMatch = desc.match(/(\d{1,2}\s+(?:gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre))/i);
-            const timeMatch = desc.match(/ore\s*(\d{1,2}[:.]\d{2})/i);
-            if (dateMatch && timeMatch) return `${dateMatch[1]} - ${timeMatch[1].replace('.', ':')}`;
-            if (dateMatch) return dateMatch[1];
-            if (timeMatch) return `Ore ${timeMatch[1].replace('.', ':')}`;
+            
+            const numericDateMatch = desc.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{2,4})/);
+            if (numericDateMatch) {
+                const day = numericDateMatch[1].padStart(2, '0');
+                const month = numericDateMatch[2].padStart(2, '0');
+                const year = numericDateMatch[3];
+                return `${day}/${month}/${year}`;
+            }
+            
+            const months = {
+                'gennaio': '01', 'febbraio': '02', 'marzo': '03', 'aprile': '04',
+                'maggio': '05', 'giugno': '06', 'luglio': '07', 'agosto': '08',
+                'settembre': '09', 'ottobre': '10', 'novembre': '11', 'dicembre': '12'
+            };
+            const textDateMatch = desc.match(/(\d{1,2})\s+(gennaio|febbraio|marzo|aprile|maggio|giugno|luglio|agosto|settembre|ottobre|novembre|dicembre)(?:\s+(\d{4}))?/i);
+            if (textDateMatch) {
+                const day = textDateMatch[1].padStart(2, '0');
+                const month = months[textDateMatch[2].toLowerCase()];
+                const year = textDateMatch[3] || new Date().getFullYear();
+                return `${day}/${month}/${year}`;
+            }
+            
             return null;
         }
 
@@ -1122,7 +1207,7 @@
         function prevHeroSlide() { heroSlideIndex = (heroSlideIndex - 1 + heroVideos.length) % heroVideos.length; updateHeroSlide(); }
         function goToHeroSlide(i) { heroSlideIndex = i; updateHeroSlide(); }
         function playHeroVideo() { if (heroVideos.length > 0) playVideo(heroVideos[heroSlideIndex].id); }
-        function addHeroToWatchlist() { if (heroVideos.length > 0) { toggleWatchlist(heroVideos[heroSlideIndex].id); showNotification('❤️ Aggiunto alla lista!'); } }
+        function addHeroToWatchlist() { if (heroVideos.length > 0) toggleWatchlist(heroVideos[heroSlideIndex].id); }
 
         // Videos
         function loadVideos() {
@@ -1136,26 +1221,29 @@
 
         function createVideoCard(video) {
             const videoId = extractYouTubeId(video.url);
-            const thumb = video.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : '');
+            const thumb = video.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : 'https://via.placeholder.com/320x180?text=Video');
             const isInWatchlist = getWatchlist().includes(video.id);
+            const views = video.views || 0;
+            const likes = video.likes || 0;
             
             let badge = '';
             if (video.category === 'live') {
                 const dateTime = extractDateTimeFromDescription(video.description);
-                badge = dateTime ? `<span class="absolute top-2 left-2 bg-green-600/90 text-white text-xs px-2 py-1 rounded font-medium">${dateTime}</span>` : '<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium animate-pulse">LIVE</span>';
+                badge = dateTime 
+                    ? `<span class="absolute top-2 left-2 bg-green-600/90 text-white text-xs px-2 py-1 rounded font-medium">${dateTime}</span>`
+                    : '<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium animate-pulse">LIVE</span>';
             }
 
             const timeInfo = video.category === 'live' ? extractTimeFromDescription(video.description) : null;
-            const views = video.views || 0;
-            const likes = video.likes || 0;
+            const infoText = timeInfo || `${views} views • ${likes} ❤️`;
 
             return `
                 <div class="video-card min-w-[200px] md:min-w-[280px] bg-gray-800 rounded-xl overflow-hidden cursor-pointer flex-shrink-0" onclick="playVideo('${video.id}')">
                     <div class="relative group">
-                        <img src="${thumb}" alt="${video.title}" class="w-full h-28 md:h-40 object-cover">
+                        <img src="${thumb}" alt="${video.title}" class="w-full h-28 md:h-40 object-cover" onerror="this.src='https://via.placeholder.com/320x180?text=Video'">
                         <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                             <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
-                                <div class="w-0 h-0 border-t-[8px] border-t-transparent border-l-[14px] border-l-gray-900 border-b-[8px] border-b-transparent ml-1"></div>
+                                <svg class="w-6 h-6 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
                             </div>
                         </div>
                         ${badge}
@@ -1165,10 +1253,7 @@
                     </div>
                     <div class="p-4">
                         <h4 class="font-semibold truncate">${video.title}</h4>
-                        <p class="text-sm text-gray-400 mt-1 flex items-center gap-3">
-                            <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> ${views}</span>
-                            <span class="flex items-center gap-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 10h4.764a2 2 0 011.789 2.894l-3.5 7A2 2 0 0115.263 21h-4.017c-.163 0-.326-.02-.485-.06L7 20m7-10V5a2 2 0 00-2-2h-.095c-.5 0-.905.405-.905.905 0 .714-.211 1.412-.608 2.006L7 11v9m7-10h-2M7 20H5a2 2 0 01-2-2v-6a2 2 0 012-2h2.5"></path></svg> ${likes}</span>
-                        </p>
+                        <p class="text-sm text-gray-400 mt-1">${infoText}</p>
                     </div>
                 </div>
             `;
@@ -1176,49 +1261,73 @@
 
         function playVideo(id) {
             const video = videosCache.find(v => v.id === id);
-            if (!video) return;
+            if (!video) {
+                console.error('Video non trovato:', id);
+                return;
+            }
             
             currentVideo = video;
             const videoId = extractYouTubeId(video.url);
             
-            // Increment views
-            const newViews = (video.views || 0) + 1;
-            db.ref('videos/' + id).update({ views: newViews });
-            addPoints(5);
+            console.log('Playing video:', video.title);
+            console.log('URL originale:', video.url);
+            console.log('Video ID estratto:', videoId);
             
-            document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
-            document.getElementById('videoTitle').textContent = video.title;
-            document.getElementById('videoViews').innerHTML = `<svg class="w-4 h-4 inline" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path></svg> ${newViews} visualizzazioni`;
-            document.getElementById('videoCategory').textContent = getCategoryLabel(video.category);
-            document.getElementById('videoDate').textContent = video.date || '';
-            document.getElementById('videoDescription').textContent = video.description || '';
-            document.getElementById('likeCount').textContent = video.likes || 0;
-            
-            const userLiked = (video.likedBy || []).includes(currentUser.username);
-            const likeIcon = document.getElementById('likeIcon');
-            if (userLiked) {
-                likeIcon.setAttribute('fill', 'currentColor');
-                likeIcon.classList.add('text-green-400');
-            } else {
-                likeIcon.setAttribute('fill', 'none');
-                likeIcon.classList.remove('text-green-400');
-            }
-            
-            // Show/hide live chat
-            const chatSection = document.getElementById('liveChatSection');
-            if (video.category === 'live') {
-                chatSection.classList.remove('hidden');
-                loadLiveChat();
-            } else {
-                chatSection.classList.add('hidden');
-            }
-            
-            loadComments();
-            loadRelatedVideos(video.category, video.id);
-            
+            // Prima nascondi tutte le pagine e mostra la pagina video
             hideAllPages();
             document.getElementById('videoPage').classList.remove('hidden');
             window.scrollTo(0, 0);
+            
+            // Poi imposta il video player
+            const player = document.getElementById('videoPlayer');
+            if (!player) {
+                console.error('Player non trovato!');
+                return;
+            }
+            
+            if (videoId) {
+                const embedUrl = `https://www.youtube.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`;
+                console.log('Embed URL:', embedUrl);
+                
+                // Forza il reload dell'iframe
+                player.src = '';
+                setTimeout(() => {
+                    player.src = embedUrl;
+                }, 100);
+            } else {
+                console.error('Video ID non trovato per URL:', video.url);
+                alert('Errore: impossibile caricare il video. URL non valido.');
+                return;
+            }
+            
+            document.getElementById('videoTitle').textContent = video.title;
+            document.getElementById('videoCategory').textContent = getCategoryLabel(video.category);
+            document.getElementById('videoDate').textContent = video.date || '';
+            document.getElementById('videoViews').textContent = (video.views || 0) + ' visualizzazioni';
+            document.getElementById('videoDescription').textContent = video.description || '';
+            
+            // Update likes
+            const likes = video.likes || 0;
+            const userLiked = video.likedBy && video.likedBy.includes(currentUser.id);
+            document.getElementById('likeCount').textContent = likes;
+            document.getElementById('likeIcon').setAttribute('fill', userLiked ? 'currentColor' : 'none');
+            
+            // Show live chat for live videos
+            const liveChatSection = document.getElementById('liveChatSection');
+            if (video.category === 'live') {
+                liveChatSection.classList.remove('hidden');
+                loadLiveChat();
+            } else {
+                liveChatSection.classList.add('hidden');
+            }
+            
+            // Increment views
+            const newViews = (video.views || 0) + 1;
+            db.ref('videos/' + video.id).update({ views: newViews });
+            addPoints(5);
+            
+            loadComments();
+            loadRelatedVideos(video.category, video.id);
         }
 
         function getCategoryLabel(cat) {
@@ -1228,61 +1337,88 @@
 
         function loadRelatedVideos(category, currentId) {
             const related = videosCache.filter(v => v.category === category && v.id !== currentId).slice(0, 5);
-            document.getElementById('relatedVideos').innerHTML = related.map(v => {
+            document.getElementById('relatedVideos').innerHTML = related.length === 0 ? '<p class="text-gray-500">Nessun video correlato</p>' : related.map(v => {
                 const videoId = extractYouTubeId(v.url);
                 const thumb = v.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/mqdefault.jpg` : '');
                 return `<div class="flex gap-3 cursor-pointer hover:bg-gray-800 rounded-lg p-2 transition" onclick="playVideo('${v.id}')">
-                    <img src="${thumb}" class="w-32 h-20 object-cover rounded-lg">
-                    <div class="flex-1 min-w-0"><h4 class="font-medium text-sm line-clamp-2">${v.title}</h4><p class="text-xs text-gray-400 mt-1">👁️ ${v.views || 0}</p></div>
+                    <img src="${thumb}" class="w-32 h-20 object-cover rounded-lg" onerror="this.src='https://via.placeholder.com/128x80?text=Video'">
+                    <div class="flex-1 min-w-0"><h4 class="font-medium text-sm line-clamp-2">${v.title}</h4></div>
                 </div>`;
             }).join('');
         }
 
-        // Likes
+        // Like System
         function toggleLike() {
             if (!currentVideo) return;
+            
             let likedBy = currentVideo.likedBy || [];
             let likes = currentVideo.likes || 0;
             
-            if (likedBy.includes(currentUser.username)) {
-                likedBy = likedBy.filter(u => u !== currentUser.username);
+            if (likedBy.includes(currentUser.id)) {
+                likedBy = likedBy.filter(id => id !== currentUser.id);
                 likes--;
             } else {
-                likedBy.push(currentUser.username);
+                likedBy.push(currentUser.id);
                 likes++;
                 addPoints(2);
             }
             
             db.ref('videos/' + currentVideo.id).update({ likes, likedBy });
+            currentVideo.likes = likes;
+            currentVideo.likedBy = likedBy;
+            
             document.getElementById('likeCount').textContent = likes;
-            const likeIcon = document.getElementById('likeIcon');
-            if (likedBy.includes(currentUser.username)) {
-                likeIcon.setAttribute('fill', 'currentColor');
-                likeIcon.classList.add('text-green-400');
-            } else {
-                likeIcon.setAttribute('fill', 'none');
-                likeIcon.classList.remove('text-green-400');
-            }
+            document.getElementById('likeIcon').setAttribute('fill', likedBy.includes(currentUser.id) ? 'currentColor' : 'none');
         }
 
         // Share
-        function openShareModal() { document.getElementById('shareModal').classList.remove('hidden'); }
-        function closeShareModal() { document.getElementById('shareModal').classList.add('hidden'); }
-        function shareWhatsApp() { window.open(`https://wa.me/?text=${encodeURIComponent(currentVideo.title + ' - Cestistica TV: ' + location.href)}`); }
-        function shareFacebook() { window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(location.href)}`); }
-        function shareTwitter() { window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(currentVideo.title)}&url=${encodeURIComponent(location.href)}`); }
-        function copyLink() { navigator.clipboard.writeText(location.href); showNotification('🔗 Link copiato!'); closeShareModal(); }
+        function openShareModal() {
+            document.getElementById('shareModal').classList.remove('hidden');
+        }
+
+        function closeShareModal() {
+            document.getElementById('shareModal').classList.add('hidden');
+        }
+
+        function shareWhatsApp() {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent(currentVideo.title + ' - Cestistica TV');
+            window.open(`https://wa.me/?text=${text}%20${url}`, '_blank');
+            closeShareModal();
+        }
+
+        function shareFacebook() {
+            const url = encodeURIComponent(window.location.href);
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank');
+            closeShareModal();
+        }
+
+        function shareTwitter() {
+            const url = encodeURIComponent(window.location.href);
+            const text = encodeURIComponent(currentVideo.title + ' - Cestistica TV');
+            window.open(`https://twitter.com/intent/tweet?text=${text}&url=${url}`, '_blank');
+            closeShareModal();
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href);
+            alert('Link copiato!');
+            closeShareModal();
+        }
 
         // Live Chat
         function loadLiveChat() {
             if (!currentVideo) return;
-            db.ref('liveChat/' + currentVideo.id).orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
+            db.ref('liveChats/' + currentVideo.id).orderByChild('timestamp').limitToLast(50).on('value', (snapshot) => {
                 const container = document.getElementById('liveChatMessages');
-                container.innerHTML = '';
-                snapshot.forEach((child) => {
-                    const msg = child.val();
-                    container.innerHTML += `<div class="flex gap-2 text-sm"><span class="text-green-400 font-medium">${msg.username}:</span><span class="text-gray-300">${msg.text}</span></div>`;
-                });
+                const messages = [];
+                snapshot.forEach(child => messages.push({ id: child.key, ...child.val() }));
+                container.innerHTML = messages.map(m => `
+                    <div class="flex gap-2 text-sm">
+                        <span class="font-bold text-green-400">${m.username}:</span>
+                        <span class="text-gray-300">${m.text}</span>
+                    </div>
+                `).join('');
                 container.scrollTop = container.scrollHeight;
             });
         }
@@ -1292,13 +1428,13 @@
             const text = input.value.trim();
             if (!text || !currentVideo) return;
             
-            db.ref('liveChat/' + currentVideo.id).push({
+            db.ref('liveChats/' + currentVideo.id).push({
                 username: currentUser.username,
-                text: text,
+                text,
                 timestamp: Date.now()
             });
-            input.value = '';
             addPoints(2);
+            input.value = '';
         }
 
         // Comments
@@ -1325,23 +1461,17 @@
             if (!currentVideo.comments) currentVideo.comments = [];
             currentVideo.comments.push({ username: currentUser.username, text, date: new Date().toLocaleDateString('it-IT') });
             db.ref('videos/' + currentVideo.id).update({ comments: currentVideo.comments });
+            addPoints(10);
             input.value = '';
             loadComments();
-            addPoints(10);
-            showNotification('💬 Commento aggiunto!');
         }
 
         // Watchlist
         function getWatchlist() { return JSON.parse(localStorage.getItem('cesticaWatchlist_' + currentUser.username) || '[]'); }
         function toggleWatchlist(videoId) {
             let watchlist = getWatchlist();
-            if (watchlist.includes(videoId)) {
-                watchlist = watchlist.filter(id => id !== videoId);
-                showNotification('💔 Rimosso dalla lista');
-            } else {
-                watchlist.push(videoId);
-                showNotification('❤️ Aggiunto alla lista!');
-            }
+            if (watchlist.includes(videoId)) watchlist = watchlist.filter(id => id !== videoId);
+            else watchlist.push(videoId);
             localStorage.setItem('cesticaWatchlist_' + currentUser.username, JSON.stringify(watchlist));
             loadVideos();
         }
@@ -1361,19 +1491,26 @@
         function showNews() {
             hideAllPages();
             document.getElementById('newsPage').classList.remove('hidden');
+            loadNewsList();
+        }
+
+        function loadNewsList() {
             const container = document.getElementById('newsList');
             const emptyMsg = document.getElementById('emptyNews');
-            
-            if (newsCache.length === 0) { container.innerHTML = ''; emptyMsg.classList.remove('hidden'); }
-            else {
+            if (newsCache.length === 0) {
+                container.innerHTML = '';
+                emptyMsg.classList.remove('hidden');
+            } else {
                 emptyMsg.classList.add('hidden');
-                container.innerHTML = newsCache.map(n => {
-                    const firstImage = (n.images && n.images[0]) || 'https://placehold.co/400x200/1a1a1a/228B22?text=News';
-                    return `<div class="news-card bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:ring-2 hover:ring-green-500 transition" onclick="showNewsArticle('${n.id}')">
-                        <img src="${firstImage}" class="w-full h-48 object-cover">
-                        <div class="p-4"><h3 class="font-bold text-lg line-clamp-2">${n.title}</h3><p class="text-gray-400 text-sm mt-2">${n.date}</p></div>
-                    </div>`;
-                }).join('');
+                container.innerHTML = newsCache.map(n => `
+                    <div class="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:scale-[1.02] transition" onclick="showNewsArticle('${n.id}')">
+                        ${n.image ? `<img src="${n.image}" class="w-full h-48 object-cover">` : '<div class="w-full h-48 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center text-6xl">📰</div>'}
+                        <div class="p-4">
+                            <h3 class="font-bold text-lg">${n.title}</h3>
+                            <p class="text-gray-400 text-sm mt-2">${n.date}</p>
+                        </div>
+                    </div>
+                `).join('');
             }
         }
 
@@ -1384,138 +1521,66 @@
             hideAllPages();
             document.getElementById('newsArticlePage').classList.remove('hidden');
             
-            let imagesHtml = '';
-            if (news.images && news.images.length > 0) {
-                imagesHtml = `<div class="grid ${news.images.length > 1 ? 'grid-cols-2' : ''} gap-4 my-6">${news.images.map(img => `<img src="${img}" class="rounded-lg w-full">`).join('')}</div>`;
-            }
-            
-            let videoHtml = '';
+            let videoEmbed = '';
             if (news.video) {
                 const videoId = extractYouTubeId(news.video);
-                if (videoId) videoHtml = `<div class="aspect-video my-6"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full rounded-xl" frameborder="0" allowfullscreen></iframe></div>`;
+                if (videoId) {
+                    videoEmbed = `<div class="aspect-video my-6"><iframe src="https://www.youtube.com/embed/${videoId}" class="w-full h-full rounded-xl" frameborder="0" allowfullscreen></iframe></div>`;
+                }
             }
             
-            document.getElementById('newsArticleContent').innerHTML = `
-                <h1 class="text-3xl font-bold mb-4">${news.title}</h1>
+            document.getElementById('articleContent').innerHTML = `
+                ${news.image ? `<img src="${news.image}" class="w-full h-64 md:h-96 object-cover rounded-xl mb-6">` : ''}
+                <h1 class="text-3xl md:text-4xl font-bold mb-4">${news.title}</h1>
                 <p class="text-gray-400 mb-6">${news.date}</p>
-                ${imagesHtml}
-                ${videoHtml}
+                ${videoEmbed}
                 <div class="prose prose-invert max-w-none text-gray-300 leading-relaxed">${news.content.replace(/\n/g, '<br>')}</div>
             `;
-            window.scrollTo(0, 0);
-        }
-
-        function addNews() {
-            const title = document.getElementById('newNewsTitle').value.trim();
-            const content = document.getElementById('newNewsContent').value.trim();
-            const video = document.getElementById('newNewsVideo').value.trim();
-            const imageFiles = document.getElementById('newNewsImages').files;
-            
-            if (!title || !content) return showNotification('⚠️ Inserisci titolo e contenuto');
-            
-            const processImages = async () => {
-                const images = [];
-                for (let i = 0; i < Math.min(imageFiles.length, 5); i++) {
-                    const reader = new FileReader();
-                    const result = await new Promise(resolve => {
-                        reader.onload = e => resolve(e.target.result);
-                        reader.readAsDataURL(imageFiles[i]);
-                    });
-                    images.push(result);
-                }
-                return images;
-            };
-            
-            processImages().then(images => {
-                const newNews = { title, content, video, images, date: new Date().toLocaleDateString('it-IT') };
-                const newRef = db.ref('news').push();
-                newNews.id = newRef.key;
-                newRef.set(newNews);
-                document.getElementById('newNewsTitle').value = '';
-                document.getElementById('newNewsContent').value = '';
-                document.getElementById('newNewsVideo').value = '';
-                document.getElementById('newNewsImages').value = '';
-                showNotification('✅ News pubblicata!');
-                loadAdminNewsList();
-            });
-        }
-
-        function loadAdminNewsList() {
-            const container = document.getElementById('adminNewsList');
-            if (!container) return;
-            container.innerHTML = newsCache.length === 0 ? '<p class="text-gray-500">Nessuna news</p>' : newsCache.map(n => `
-                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
-                    <div class="flex-1 min-w-0"><p class="font-medium truncate">${n.title}</p><p class="text-sm text-gray-400">${n.date}</p></div>
-                    <button onclick="deleteNews('${n.id}')" class="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm">🗑️</button>
-                </div>
-            `).join('');
-        }
-
-        function deleteNews(id) {
-            if (!confirm('Eliminare questa news?')) return;
-            db.ref('news/' + id).remove();
-            showNotification('🗑️ News eliminata');
         }
 
         // Calendar
         function showCalendar() {
             hideAllPages();
             document.getElementById('calendarPage').classList.remove('hidden');
-            loadCalendarPdf();
+            loadCalendar();
         }
 
-        function loadCalendarPdf() {
+        function loadCalendar() {
             db.ref('settings/calendar').once('value', (snapshot) => {
-                const pdfData = snapshot.val();
-                if (pdfData) {
+                const calendarData = snapshot.val();
+                if (calendarData) {
                     document.getElementById('noCalendar').classList.add('hidden');
-                    document.getElementById('pdfCanvas').classList.remove('hidden');
-                    document.getElementById('pdfControls').classList.remove('hidden');
-                    renderPdf(pdfData);
-                } else {
-                    document.getElementById('noCalendar').classList.remove('hidden');
-                    document.getElementById('pdfCanvas').classList.add('hidden');
-                    document.getElementById('pdfControls').classList.add('hidden');
+                    document.getElementById('calendarPdfViewer').classList.remove('hidden');
+                    renderPdf(calendarData);
                 }
             });
         }
 
-        async function renderPdf(pdfData) {
+        function renderPdf(base64Data) {
             pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-            pdfDoc = await pdfjsLib.getDocument({ data: atob(pdfData.split(',')[1]) }).promise;
-            pdfPage = 1;
-            renderPdfPage();
+            const pdfData = atob(base64Data.split(',')[1]);
+            pdfjsLib.getDocument({ data: pdfData }).promise.then(pdf => {
+                pdfDoc = pdf;
+                document.getElementById('pdfPageInfo').textContent = `Pagina 1 di ${pdf.numPages}`;
+                renderPdfPage(1);
+            });
         }
 
-        async function renderPdfPage() {
-            const page = await pdfDoc.getPage(pdfPage);
-            const canvas = document.getElementById('pdfCanvas');
-            const ctx = canvas.getContext('2d');
-            const viewport = page.getViewport({ scale: 1.5 });
-            canvas.width = viewport.width;
-            canvas.height = viewport.height;
-            await page.render({ canvasContext: ctx, viewport }).promise;
-            document.getElementById('pdfPageInfo').textContent = `Pagina ${pdfPage} di ${pdfDoc.numPages}`;
+        function renderPdfPage(num) {
+            pdfDoc.getPage(num).then(page => {
+                const canvas = document.getElementById('pdfCanvas');
+                const ctx = canvas.getContext('2d');
+                const viewport = page.getViewport({ scale: 1.5 });
+                canvas.width = viewport.width;
+                canvas.height = viewport.height;
+                page.render({ canvasContext: ctx, viewport });
+                pdfPageNum = num;
+                document.getElementById('pdfPageInfo').textContent = `Pagina ${num} di ${pdfDoc.numPages}`;
+            });
         }
 
-        function prevPdfPage() { if (pdfPage > 1) { pdfPage--; renderPdfPage(); } }
-        function nextPdfPage() { if (pdfDoc && pdfPage < pdfDoc.numPages) { pdfPage++; renderPdfPage(); } }
-
-        function uploadCalendar(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = e => {
-                db.ref('settings/calendar').set(e.target.result);
-                showNotification('✅ Calendario caricato!');
-            };
-            reader.readAsDataURL(file);
-        }
-
-        function removeCalendar() {
-            db.ref('settings/calendar').remove();
-            showNotification('🗑️ Calendario rimosso');
-        }
+        function prevPdfPage() { if (pdfPageNum > 1) renderPdfPage(pdfPageNum - 1); }
+        function nextPdfPage() { if (pdfDoc && pdfPageNum < pdfDoc.numPages) renderPdfPage(pdfPageNum + 1); }
 
         // Pronostici
         function showPronostici() {
@@ -1527,122 +1592,105 @@
         function loadPronosticiList() {
             const container = document.getElementById('pronosticiList');
             const emptyMsg = document.getElementById('emptyPronostici');
-            
             const activePronostici = pronosticiCache.filter(p => !p.result);
-            if (activePronostici.length === 0) { container.innerHTML = ''; emptyMsg.classList.remove('hidden'); return; }
             
-            emptyMsg.classList.add('hidden');
-            container.innerHTML = activePronostici.map(p => {
-                const userVote = (p.votes || {})[currentUser.username];
-                const votes1 = Object.values(p.votes || {}).filter(v => v === 'team1').length;
-                const votes2 = Object.values(p.votes || {}).filter(v => v === 'team2').length;
-                
-                return `<div class="bg-gray-800 rounded-xl p-6">
-                    <p class="text-gray-400 text-sm mb-4">📅 ${p.date}</p>
-                    <div class="flex items-center justify-between gap-4">
-                        <button onclick="votePronostico('${p.id}', 'team1')" class="flex-1 p-4 rounded-xl text-center transition ${userVote === 'team1' ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                            <p class="font-bold text-lg">${p.team1}</p>
-                            <p class="text-2xl mt-2">${votes1}</p>
-                        </button>
-                        <span class="text-2xl font-bold text-gray-500">VS</span>
-                        <button onclick="votePronostico('${p.id}', 'team2')" class="flex-1 p-4 rounded-xl text-center transition ${userVote === 'team2' ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}">
-                            <p class="font-bold text-lg">${p.team2}</p>
-                            <p class="text-2xl mt-2">${votes2}</p>
-                        </button>
-                    </div>
-                </div>`;
-            }).join('');
+            if (activePronostici.length === 0) {
+                container.innerHTML = '';
+                emptyMsg.classList.remove('hidden');
+            } else {
+                emptyMsg.classList.add('hidden');
+                container.innerHTML = activePronostici.map(p => {
+                    const userVote = p.votes ? p.votes[currentUser.id] : null;
+                    const votes1 = p.votes ? Object.values(p.votes).filter(v => v === 1).length : 0;
+                    const votes2 = p.votes ? Object.values(p.votes).filter(v => v === 2).length : 0;
+                    
+                    return `
+                        <div class="bg-gray-800 rounded-xl p-6">
+                            <div class="flex justify-between items-center mb-4">
+                                <span class="text-sm text-gray-400">${p.date} ${p.time}</span>
+                                <span class="text-xs bg-green-600 px-2 py-1 rounded">+5 punti</span>
+                            </div>
+                            <div class="grid grid-cols-3 gap-4 items-center">
+                                <button onclick="votePronostico('${p.id}', 1)" class="p-4 rounded-xl text-center transition ${userVote === 1 ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}">
+                                    <p class="font-bold">${p.team1}</p>
+                                    <p class="text-sm text-gray-400 mt-1">${votes1} voti</p>
+                                </button>
+                                <div class="text-center text-2xl font-bold text-gray-500">VS</div>
+                                <button onclick="votePronostico('${p.id}', 2)" class="p-4 rounded-xl text-center transition ${userVote === 2 ? 'bg-green-600' : 'bg-gray-700 hover:bg-gray-600'}">
+                                    <p class="font-bold">${p.team2}</p>
+                                    <p class="text-sm text-gray-400 mt-1">${votes2} voti</p>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
-        function votePronostico(id, vote) {
+        function votePronostico(id, team) {
             const prono = pronosticiCache.find(p => p.id === id);
-            if (!prono || prono.result) return;
+            if (!prono || (prono.votes && prono.votes[currentUser.id])) return;
             
-            const currentVote = (prono.votes || {})[currentUser.username];
-            if (currentVote === vote) return;
-            
-            db.ref(`pronostici/${id}/votes/${currentUser.username}`).set(vote);
-            if (!currentVote) addPoints(5);
-            showNotification('🎯 Voto registrato!');
+            const votes = prono.votes || {};
+            votes[currentUser.id] = team;
+            db.ref('pronostici/' + id).update({ votes });
+            addPoints(5);
+            loadPronosticiList();
         }
 
-        function addPronostico() {
-            const team1 = document.getElementById('pronoTeam1').value.trim();
-            const team2 = document.getElementById('pronoTeam2').value.trim();
-            const date = document.getElementById('pronoDate').value;
-            
-            if (!team1 || !team2 || !date) return showNotification('⚠️ Compila tutti i campi');
-            
-            const newProno = { team1, team2, date: new Date(date).toLocaleString('it-IT'), votes: {} };
-            const newRef = db.ref('pronostici').push();
-            newProno.id = newRef.key;
-            newRef.set(newProno);
-            
-            document.getElementById('pronoTeam1').value = '';
-            document.getElementById('pronoTeam2').value = '';
-            document.getElementById('pronoDate').value = '';
-            showNotification('✅ Pronostico creato!');
-            loadAdminPronosticiList();
-        }
-
-        function loadAdminPronosticiList() {
-            const container = document.getElementById('adminPronosticiList');
-            if (!container) return;
-            container.innerHTML = pronosticiCache.length === 0 ? '<p class="text-gray-500">Nessun pronostico</p>' : pronosticiCache.map(p => `
-                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
-                    <div class="flex-1"><p class="font-medium">${p.team1} vs ${p.team2}</p><p class="text-sm text-gray-400">${p.date}</p></div>
-                    ${!p.result ? `
-                        <button onclick="setPronoResult('${p.id}', 'team1')" class="bg-green-600 px-2 py-1 rounded text-xs">1</button>
-                        <button onclick="setPronoResult('${p.id}', 'team2')" class="bg-blue-600 px-2 py-1 rounded text-xs">2</button>
-                    ` : `<span class="text-green-400">${p.result === 'team1' ? p.team1 : p.team2} vince</span>`}
-                    <button onclick="deletePronostico('${p.id}')" class="bg-red-600 px-2 py-1 rounded text-xs">🗑️</button>
-                </div>
-            `).join('');
-        }
-
-        function setPronoResult(id, result) {
-            const prono = pronosticiCache.find(p => p.id === id);
-            if (!prono) return;
-            
-            db.ref(`pronostici/${id}`).update({ result });
-            
-            // Award points to winners
-            Object.entries(prono.votes || {}).forEach(([username, vote]) => {
-                if (vote === result) {
-                    const user = usersCache.find(u => u.username === username);
-                    if (user) db.ref('users/' + user.id).update({ points: (user.points || 0) + 50 });
-                }
-            });
-            
-            showNotification('✅ Risultato registrato!');
-        }
-
-        function deletePronostico(id) {
-            if (!confirm('Eliminare?')) return;
-            db.ref('pronostici/' + id).remove();
-        }
-
-        // Classifica Tifosi
+        // Classifica
         function showClassifica() {
             hideAllPages();
             document.getElementById('classificaPage').classList.remove('hidden');
-            
+            loadClassifica();
+        }
+
+        function loadClassifica() {
             const sorted = [...usersCache].filter(u => !u.isAdmin).sort((a, b) => (b.points || 0) - (a.points || 0));
-            document.getElementById('classificaList').innerHTML = sorted.map((u, i) => {
-                const badge = getUserBadge(u.points || 0);
-                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `#${i + 1}`;
-                return `<div class="flex items-center gap-4 bg-gray-800 rounded-xl p-4">
-                    <span class="text-2xl font-bold w-12 text-center">${medal}</span>
-                    <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
-                        ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold">${u.username.charAt(0).toUpperCase()}</span>`}
+            const container = document.getElementById('classificaList');
+            container.innerHTML = sorted.map((u, i) => {
+                const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `${i + 1}°`;
+                return `
+                    <div class="flex items-center gap-4 bg-gray-800 rounded-xl p-4 ${i < 3 ? 'border border-yellow-500/30' : ''}">
+                        <span class="text-2xl w-10 text-center">${medal}</span>
+                        <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
+                            ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold text-lg">${u.username.charAt(0).toUpperCase()}</span>`}
+                        </div>
+                        <div class="flex-1">
+                            <p class="font-semibold">${u.nome} ${u.cognome}</p>
+                            <p class="text-sm text-gray-400">${getBadge(u.points || 0)}</p>
+                        </div>
+                        <div class="text-right">
+                            <p class="font-bold text-green-400">${u.points || 0}</p>
+                            <p class="text-xs text-gray-500">punti</p>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <p class="font-semibold">${u.nome} ${u.cognome}</p>
-                        <span class="badge bg-green-600">${badge.emoji} ${badge.name}</span>
-                    </div>
-                    <p class="text-xl font-bold text-yellow-400">${u.points || 0} 💚</p>
-                </div>`;
+                `;
             }).join('');
+        }
+
+        function showPointsInfo() {
+            document.getElementById('pointsInfoModal').classList.remove('hidden');
+        }
+
+        function closePointsInfo() {
+            document.getElementById('pointsInfoModal').classList.add('hidden');
+        }
+
+        // Navigation
+        function hideAllPages() {
+            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            });
+            const player = document.getElementById('videoPlayer');
+            if (player) player.src = '';
+        }
+
+        function showHome() {
+            hideAllPages();
+            document.getElementById('homeContent').classList.remove('hidden');
+            loadVideos();
         }
 
         // Search
@@ -1658,204 +1706,24 @@
             });
         }
 
-        // Biancoverdi Card Page
-        function showBiancoverdiCard() {
-            hideAllPages();
-            document.getElementById('biancoverdiCardPage').classList.remove('hidden');
-            updateCardPageDisplay();
-        }
-
-        function updateCardPageDisplay() {
-            const badge = getUserBadge(currentUser.points || 0);
-            
-            // Card avatar
-            const cardAvatarImg = document.getElementById('cardAvatarImgPage');
-            const cardAvatarInitial = document.getElementById('cardAvatarInitialPage');
-            if (currentUser.profilePhoto) {
-                cardAvatarImg.src = currentUser.profilePhoto;
-                cardAvatarImg.classList.remove('hidden');
-                cardAvatarInitial.classList.add('hidden');
-            } else {
-                cardAvatarImg.classList.add('hidden');
-                cardAvatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
-                cardAvatarInitial.classList.remove('hidden');
-            }
-            
-            // Card logo
-            const headerLogo = document.getElementById('headerLogo');
-            const cardLogo = document.getElementById('cardLogoPage');
-            const cardLogoEmoji = document.getElementById('cardLogoEmojiPage');
-            if (headerLogo && !headerLogo.classList.contains('hidden')) {
-                cardLogo.src = headerLogo.src;
-                cardLogo.classList.remove('hidden');
-                cardLogoEmoji.classList.add('hidden');
-            }
-            
-            const cardNumber = generateCardNumber(currentUser.id);
-            
-            document.getElementById('cardFullNamePage').textContent = `${currentUser.nome} ${currentUser.cognome}`;
-            document.getElementById('cardUsernamePage').textContent = `@${currentUser.username}`;
-            document.getElementById('cardNumberPage').textContent = cardNumber;
-            document.getElementById('cardBadgePage').textContent = `${badge.emoji} ${badge.name}`;
-            document.getElementById('cardDatePage').textContent = `Membro dal ${currentUser.date}`;
-            
-            // Info section
-            document.getElementById('infoFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
-            document.getElementById('infoUsername').textContent = `@${currentUser.username}`;
-            document.getElementById('infoCardNumber').textContent = cardNumber;
-            document.getElementById('infoBadge').innerHTML = `<span class="badge bg-green-600">${badge.emoji} ${badge.name}</span>`;
-            document.getElementById('infoPoints').textContent = `${currentUser.points || 0} 💚`;
-            document.getElementById('infoDate').textContent = currentUser.date;
-            
-            // QR Code
-            const qrData = `cesticatv://member/${currentUser.id}`;
-            document.getElementById('cardQRPage').innerHTML = `<img src="${generateQRCode(qrData)}" class="w-full h-full rounded">`;
-        }
-
-        function downloadCardPage() {
-            showNotification('📥 Preparazione download...');
-            
-            const canvas = document.createElement('canvas');
-            const width = 400;
-            const height = 250;
-            canvas.width = width * 2;
-            canvas.height = height * 2;
-            const ctx = canvas.getContext('2d');
-            ctx.scale(2, 2);
-            
-            // Background gradient
-            const gradient = ctx.createLinearGradient(0, 0, width, height);
-            gradient.addColorStop(0, '#1a1a1a');
-            gradient.addColorStop(0.5, '#111');
-            gradient.addColorStop(1, '#000');
-            ctx.fillStyle = gradient;
-            ctx.roundRect(0, 0, width, height, 16);
-            ctx.fill();
-            
-            // Green border
-            ctx.strokeStyle = '#22c55e';
-            ctx.lineWidth = 3;
-            ctx.roundRect(0, 0, width, height, 16);
-            ctx.stroke();
-            
-            // Header
-            ctx.fillStyle = '#22c55e';
-            ctx.font = 'bold 12px Poppins, sans-serif';
-            ctx.textAlign = 'right';
-            ctx.fillText('CESTISTICA TV+', width - 20, 30);
-            
-            ctx.font = '28px sans-serif';
-            ctx.textAlign = 'left';
-            ctx.fillText('🏀', 20, 35);
-            
-            // Name
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 22px Poppins, sans-serif';
-            ctx.fillText(`${currentUser.nome} ${currentUser.cognome}`, 85, 80);
-            
-            // Username
-            ctx.fillStyle = '#22c55e';
-            ctx.font = '14px Poppins, sans-serif';
-            ctx.fillText(`@${currentUser.username}`, 85, 100);
-            
-            // Card number
-            ctx.fillStyle = '#666';
-            ctx.font = '10px Poppins, sans-serif';
-            ctx.fillText('N° TESSERA', 20, 140);
-            
-            ctx.fillStyle = '#22c55e';
-            ctx.font = 'bold 14px monospace';
-            ctx.fillText(generateCardNumber(currentUser.id), 20, 158);
-            
-            // Badge
-            const badge = getUserBadge(currentUser.points || 0);
-            ctx.fillStyle = '#22c55e';
-            ctx.font = '12px Poppins, sans-serif';
-            ctx.fillText(`${badge.emoji} ${badge.name}`, 20, 185);
-            
-            // Points
-            ctx.fillStyle = '#fbbf24';
-            ctx.font = 'bold 14px Poppins, sans-serif';
-            ctx.fillText(`${currentUser.points || 0} Biancoverdi Points`, 20, 210);
-            
-            // Date
-            ctx.fillStyle = '#666';
-            ctx.font = '10px Poppins, sans-serif';
-            ctx.fillText(`Membro dal ${currentUser.date}`, 20, 235);
-            
-            // QR placeholder (simplified)
-            ctx.fillStyle = 'white';
-            ctx.fillRect(width - 90, height - 100, 70, 70);
-            const qrImg = new Image();
-            qrImg.onload = function() {
-                ctx.drawImage(qrImg, width - 88, height - 98, 66, 66);
-                
-                // Download
-                const link = document.createElement('a');
-                link.download = `biancoverdi-card-${currentUser.username}.png`;
-                link.href = canvas.toDataURL('image/png');
-                link.click();
-                showNotification('✅ Card scaricata!');
-            };
-            qrImg.src = generateQRCode(`cesticatv://member/${currentUser.id}`);
-        }
-
-        function addToGoogleWallet() {
-            // Google Wallet requires a backend to generate passes
-            // This is a simulation that shows the concept
-            const passData = {
-                type: 'loyalty',
-                member: `${currentUser.nome} ${currentUser.cognome}`,
-                cardNumber: generateCardNumber(currentUser.id),
-                points: currentUser.points || 0
-            };
-            
-            showNotification('🔜 Google Wallet in arrivo! Funzionalità in sviluppo');
-            
-            // In production, you would redirect to:
-            // window.open(`https://pay.google.com/gp/v/save/${jwtToken}`, '_blank');
-        }
-
-        function addToAppleWallet() {
-            // Apple Wallet requires a backend to generate .pkpass files
-            // This is a simulation that shows the concept
-            showNotification('🔜 Apple Wallet in arrivo! Funzionalità in sviluppo');
-            
-            // In production, you would:
-            // window.location.href = `${backendUrl}/api/wallet/apple/${currentUser.id}`;
-        }
-
-        // Navigation
-        function hideAllPages() {
-            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
-            document.getElementById('videoPlayer').src = '';
-        }
-
-        function showHome() {
-            hideAllPages();
-            document.getElementById('homeContent').classList.remove('hidden');
-            loadVideos();
-        }
-
         // Admin
         function showAdmin() {
             if (!currentUser.isAdmin) return;
             hideAllPages();
             document.getElementById('adminPage').classList.remove('hidden');
-            updateAdminStats();
+            showAdminTab('video');
             loadAdminVideoList();
-            loadAdminNewsList();
-            loadAdminPronosticiList();
             loadMembersList();
+            updateAdminStats();
         }
 
         function showAdminTab(tab) {
-            document.querySelectorAll('.admin-tab').forEach(el => el.classList.add('hidden'));
-            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            ['video', 'news', 'calendar', 'pronostici', 'users', 'logo'].forEach(t => {
+                document.getElementById('admin' + t.charAt(0).toUpperCase() + t.slice(1) + 'Tab').classList.add('hidden');
+                document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
+            });
             document.getElementById('admin' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Tab').classList.remove('hidden');
-            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
         }
 
         function updateAdminStats() {
@@ -1872,16 +1740,17 @@
             const description = document.getElementById('newVideoDesc').value.trim();
             const thumbnail = document.getElementById('newVideoThumbnail').value.trim();
 
-            if (!title || !url) return showNotification('⚠️ Inserisci titolo e URL');
+            if (!title || !url) return alert('Inserisci titolo e URL');
 
             const videoId = extractYouTubeId(url);
-            const newVideo = { title, url, category, description, thumbnail: thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''), date: new Date().toLocaleDateString('it-IT'), views: 0, likes: 0, comments: [] };
-            const newRef = db.ref('videos').push();
-            newVideo.id = newRef.key;
-            newRef.set(newVideo).then(() => {
-                ['newVideoTitle', 'newVideoUrl', 'newVideoDesc', 'newVideoThumbnail'].forEach(id => document.getElementById(id).value = '');
-                showNotification('✅ Video aggiunto!');
-            });
+            const newVideo = { 
+                title, url, category, description, 
+                thumbnail: thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''), 
+                date: new Date().toLocaleDateString('it-IT'), 
+                views: 0, likes: 0, comments: [] 
+            };
+            db.ref('videos').push().set(newVideo);
+            ['newVideoTitle', 'newVideoUrl', 'newVideoDesc', 'newVideoThumbnail'].forEach(id => document.getElementById(id).value = '');
         }
 
         function loadAdminVideoList() {
@@ -1889,8 +1758,8 @@
             container.innerHTML = videosCache.length === 0 ? '<p class="text-gray-500">Nessun video</p>' : videosCache.map(v => `
                 <div class="flex flex-col md:flex-row md:items-center gap-3 bg-gray-700 rounded-lg p-3">
                     <div class="flex items-center gap-3 flex-1 min-w-0">
-                        <img src="${v.thumbnail || ''}" class="w-20 h-12 object-cover rounded">
-                        <div class="min-w-0"><p class="font-medium truncate">${v.title}</p><p class="text-sm text-gray-400">${getCategoryLabel(v.category)} • 👁️ ${v.views || 0}</p></div>
+                        <img src="${v.thumbnail || ''}" class="w-20 h-12 object-cover rounded" onerror="this.src='https://via.placeholder.com/80x48?text=Video'">
+                        <div class="min-w-0"><p class="font-medium truncate">${v.title}</p><p class="text-sm text-gray-400">${getCategoryLabel(v.category)} • ${v.views || 0} views</p></div>
                     </div>
                     <div class="flex gap-2 justify-end">
                         <button onclick="openEditModal('${v.id}')" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm">✏️</button>
@@ -1921,27 +1790,79 @@
                 description: document.getElementById('editVideoDesc').value.trim(),
                 category: document.getElementById('editVideoCategory').value
             };
-            db.ref('videos/' + id).update(updates).then(() => { closeEditModal(); showNotification('✅ Video modificato!'); });
+            db.ref('videos/' + id).update(updates).then(() => closeEditModal());
         }
 
         function deleteVideo(id) {
             if (!confirm('Eliminare questo video?')) return;
-            db.ref('videos/' + id).remove().then(() => showNotification('🗑️ Video eliminato'));
+            db.ref('videos/' + id).remove();
+        }
+
+        // News Admin
+        function addNews() {
+            const title = document.getElementById('newNewsTitle').value.trim();
+            const content = document.getElementById('newNewsContent').value.trim();
+            const image = document.getElementById('newNewsImage').value.trim();
+            const video = document.getElementById('newNewsVideo').value.trim();
+            
+            if (!title || !content) return alert('Inserisci titolo e contenuto');
+            
+            db.ref('news').push().set({
+                title, content, image, video,
+                date: new Date().toLocaleDateString('it-IT')
+            });
+            ['newNewsTitle', 'newNewsContent', 'newNewsImage', 'newNewsVideo'].forEach(id => document.getElementById(id).value = '');
+        }
+
+        // Calendar Admin
+        function uploadCalendarPdf(event) {
+            const file = event.target.files[0];
+            if (!file || file.type !== 'application/pdf') return alert('Seleziona un file PDF');
+            if (file.size > 5000000) return alert('File troppo grande (max 5MB)');
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                db.ref('settings/calendar').set(e.target.result);
+                document.getElementById('currentCalendarInfo').classList.remove('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function removeCalendar() {
+            db.ref('settings/calendar').remove();
+            document.getElementById('currentCalendarInfo').classList.add('hidden');
+            document.getElementById('noCalendar').classList.remove('hidden');
+            document.getElementById('calendarPdfViewer').classList.add('hidden');
+        }
+
+        // Pronostici Admin
+        function addPronostico() {
+            const team1 = document.getElementById('newPronoTeam1').value.trim();
+            const team2 = document.getElementById('newPronoTeam2').value.trim();
+            const date = document.getElementById('newPronoDate').value;
+            const time = document.getElementById('newPronoTime').value;
+            
+            if (!team1 || !team2 || !date || !time) return alert('Compila tutti i campi');
+            
+            db.ref('pronostici').push().set({ team1, team2, date, time, votes: {} });
+            ['newPronoTeam1', 'newPronoTeam2', 'newPronoDate', 'newPronoTime'].forEach(id => document.getElementById(id).value = '');
         }
 
         function loadMembersList() {
             const container = document.getElementById('membersList');
             const members = usersCache.filter(u => !u.isAdmin);
-            container.innerHTML = members.length === 0 ? '<p class="text-gray-500">Nessun membro</p>' : members.map(u => {
-                const badge = getUserBadge(u.points || 0);
-                return `<div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+            container.innerHTML = members.length === 0 ? '<p class="text-gray-500">Nessun membro</p>' : members.map(u => `
+                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
                     <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
                         ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold">${u.username.charAt(0).toUpperCase()}</span>`}
                     </div>
                     <div class="flex-1 min-w-0"><p class="font-medium">${u.nome} ${u.cognome}</p><p class="text-sm text-gray-400">${u.email}</p></div>
-                    <span class="badge bg-gray-600">${badge.emoji} ${u.points || 0} 💚</span>
-                </div>`;
-            }).join('');
+                    <div class="text-right">
+                        <span class="text-green-400 font-bold">${u.points || 0} 💚</span>
+                        <p class="text-xs text-gray-500">${u.date}</p>
+                    </div>
+                </div>
+            `).join('');
         }
 
         // Logo
@@ -1968,174 +1889,11 @@
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = e => db.ref('settings/logo').set(e.target.result).then(() => showNotification('✅ Logo caricato!'));
+            reader.onload = e => db.ref('settings/logo').set(e.target.result);
             reader.readAsDataURL(file);
         }
 
-        function removeLogo() { db.ref('settings/logo').remove().then(() => showNotification('🗑️ Logo rimosso')); }
-
-        // Points Info Modal
-        function showPointsInfo() { document.getElementById('pointsInfoModal').classList.remove('hidden'); }
-        function closePointsInfo() { document.getElementById('pointsInfoModal').classList.add('hidden'); }
-
-        // Biancoverdi Card Functions
-        function generateCardNumber(id) {
-            const hash = id.split('').reduce((a, b) => { a = ((a << 5) - a) + b.charCodeAt(0); return a & a; }, 0);
-            return 'BV-' + Math.abs(hash).toString(36).toUpperCase().substring(0, 6) + '-2024';
-        }
-
-        function generateQRCode(data) {
-            // Simple QR code pattern generator
-            const size = 64;
-            const canvas = document.createElement('canvas');
-            canvas.width = size;
-            canvas.height = size;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = 'white';
-            ctx.fillRect(0, 0, size, size);
-            ctx.fillStyle = 'black';
-            
-            // Generate pattern based on data
-            const hash = data.split('').reduce((a, b) => ((a << 5) - a) + b.charCodeAt(0), 0);
-            const pattern = Math.abs(hash).toString(2).padStart(49, '0');
-            
-            // Corner squares
-            [0, size-14].forEach(x => {
-                [0, size-14].forEach(y => {
-                    if (x === size-14 && y === size-14) return;
-                    ctx.fillRect(x+2, y+2, 10, 10);
-                    ctx.fillStyle = 'white';
-                    ctx.fillRect(x+4, y+4, 6, 6);
-                    ctx.fillStyle = 'black';
-                    ctx.fillRect(x+5, y+5, 4, 4);
-                });
-            });
-            
-            // Data pattern
-            for (let i = 0; i < 49; i++) {
-                if (pattern[i] === '1') {
-                    const x = 16 + (i % 7) * 4;
-                    const y = 16 + Math.floor(i / 7) * 4;
-                    ctx.fillRect(x, y, 3, 3);
-                }
-            }
-            
-            return canvas.toDataURL();
-        }
-
-        function updateCardDisplay() {
-            const badge = getUserBadge(currentUser.points || 0);
-            
-            // Card avatar
-            const cardAvatarImg = document.getElementById('cardAvatarImg');
-            const cardAvatarInitial = document.getElementById('cardAvatarInitial');
-            if (currentUser.profilePhoto) {
-                cardAvatarImg.src = currentUser.profilePhoto;
-                cardAvatarImg.classList.remove('hidden');
-                cardAvatarInitial.classList.add('hidden');
-            } else {
-                cardAvatarImg.classList.add('hidden');
-                cardAvatarInitial.textContent = currentUser.username.charAt(0).toUpperCase();
-                cardAvatarInitial.classList.remove('hidden');
-            }
-            
-            // Card logo
-            const headerLogo = document.getElementById('headerLogo');
-            const cardLogo = document.getElementById('cardLogo');
-            const cardLogoEmoji = document.getElementById('cardLogoEmoji');
-            if (headerLogo && !headerLogo.classList.contains('hidden')) {
-                cardLogo.src = headerLogo.src;
-                cardLogo.classList.remove('hidden');
-                cardLogoEmoji.classList.add('hidden');
-            }
-            
-            document.getElementById('cardFullName').textContent = `${currentUser.nome} ${currentUser.cognome}`;
-            document.getElementById('cardUsername').textContent = `@${currentUser.username}`;
-            document.getElementById('cardNumber').textContent = generateCardNumber(currentUser.id);
-            document.getElementById('cardBadge').textContent = `${badge.emoji} ${badge.name}`;
-            document.getElementById('cardDate').textContent = `Membro dal ${currentUser.date}`;
-            
-            // QR Code
-            const qrData = `cesticatv://member/${currentUser.id}`;
-            document.getElementById('cardQR').innerHTML = `<img src="${generateQRCode(qrData)}" class="w-full h-full">`;
-        }
-
-        function downloadCard() {
-            const card = document.getElementById('memberCard');
-            showNotification('📥 Preparazione download...');
-            
-            // Use html2canvas-like approach with canvas
-            const canvas = document.createElement('canvas');
-            const scale = 2;
-            canvas.width = card.offsetWidth * scale;
-            canvas.height = card.offsetHeight * scale;
-            const ctx = canvas.getContext('2d');
-            ctx.scale(scale, scale);
-            
-            // Draw gradient background
-            const gradient = ctx.createLinearGradient(0, 0, card.offsetWidth, card.offsetHeight);
-            gradient.addColorStop(0, '#1a1a1a');
-            gradient.addColorStop(0.5, '#111');
-            gradient.addColorStop(1, '#000');
-            ctx.fillStyle = gradient;
-            ctx.roundRect(0, 0, card.offsetWidth, card.offsetHeight, 12);
-            ctx.fill();
-            
-            // Border
-            ctx.strokeStyle = '#22c55e';
-            ctx.lineWidth = 2;
-            ctx.roundRect(0, 0, card.offsetWidth, card.offsetHeight, 12);
-            ctx.stroke();
-            
-            // Text
-            ctx.fillStyle = '#22c55e';
-            ctx.font = 'bold 10px Poppins';
-            ctx.textAlign = 'right';
-            ctx.fillText('CESTISTICA TV+', card.offsetWidth - 16, 24);
-            
-            ctx.fillStyle = 'white';
-            ctx.font = 'bold 16px Poppins';
-            ctx.textAlign = 'left';
-            ctx.fillText(`${currentUser.nome} ${currentUser.cognome}`, 70, 60);
-            
-            ctx.fillStyle = '#22c55e';
-            ctx.font = '12px Poppins';
-            ctx.fillText(`@${currentUser.username}`, 70, 78);
-            
-            ctx.fillStyle = '#666';
-            ctx.font = '8px Poppins';
-            ctx.fillText('N° TESSERA', 16, 105);
-            
-            ctx.fillStyle = '#22c55e';
-            ctx.font = '10px monospace';
-            ctx.fillText(generateCardNumber(currentUser.id), 16, 118);
-            
-            const badge = getUserBadge(currentUser.points || 0);
-            ctx.fillStyle = '#22c55e';
-            ctx.font = '10px Poppins';
-            ctx.fillText(`${badge.emoji} ${badge.name}`, 16, 140);
-            
-            ctx.fillStyle = '#666';
-            ctx.textAlign = 'right';
-            ctx.fillText(`Membro dal ${currentUser.date}`, card.offsetWidth - 16, 140);
-            
-            // Download
-            const link = document.createElement('a');
-            link.download = `biancoverdi-card-${currentUser.username}.png`;
-            link.href = canvas.toDataURL();
-            link.click();
-            
-            showNotification('✅ Card scaricata!');
-        }
-
-        // Notifications
-        function showNotification(message) {
-            const notification = document.createElement('div');
-            notification.className = 'fixed bottom-20 left-1/2 -translate-x-1/2 bg-gray-800 text-white px-6 py-3 rounded-full shadow-lg z-50 border border-green-500';
-            notification.textContent = message;
-            document.body.appendChild(notification);
-            setTimeout(() => notification.remove(), 3000);
-        }
+        function removeLogo() { db.ref('settings/logo').remove(); }
 
         // Initialize
         initFirebase();

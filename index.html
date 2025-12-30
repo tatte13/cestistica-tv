@@ -1,0 +1,1305 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cestistica TV - Club Channel Biancoverde</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-database-compat.js"></script>
+    <style>
+        * { font-family: 'Poppins', sans-serif; }
+        :root {
+            --forest-green: #228B22;
+            --light-forest: #3CB371;
+            --dark-green: #1a6b1a;
+        }
+        .gradient-bg { background: linear-gradient(135deg, #228B22 0%, #1a6b1a 100%); }
+        .card-hover:hover { transform: scale(1.02); transition: all 0.3s ease; }
+        .video-card { transition: all 0.3s ease; }
+        .video-card:hover { box-shadow: 0 0 20px rgba(34, 139, 34, 0.5); }
+        .custom-scrollbar::-webkit-scrollbar { height: 8px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #1a1a1a; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #228B22; border-radius: 4px; }
+        .hero-gradient { background: linear-gradient(to top, #111 0%, transparent 60%); }
+        .category-scroll { scroll-behavior: smooth; }
+        input:focus, textarea:focus, select:focus { outline: none; box-shadow: 0 0 0 2px #3CB371; }
+        .animate-pulse-slow { animation: pulse 3s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+        
+        .mobile-menu { transform: translateX(-100%); transition: transform 0.3s ease; }
+        .mobile-menu.open { transform: translateX(0); }
+        
+        .loading-overlay { 
+            position: fixed; inset: 0; background: #111; 
+            display: flex; align-items: center; justify-content: center; 
+            z-index: 100; flex-direction: column; gap: 1rem;
+        }
+        .loading-spinner {
+            width: 50px; height: 50px; border: 4px solid #333;
+            border-top-color: #228B22; border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .sync-indicator {
+            position: fixed; bottom: 20px; left: 20px;
+            padding: 8px 16px; border-radius: 20px; font-size: 12px;
+            z-index: 50; display: flex; align-items: center; gap: 8px;
+        }
+        .sync-indicator.online { background: #22c55e; color: white; }
+        .sync-indicator.offline { background: #ef4444; color: white; }
+        
+        @media (max-width: 768px) {
+            .video-card { min-width: 160px !important; }
+            .video-card img { height: 100px !important; }
+            .video-card .p-4 { padding: 0.75rem !important; }
+            .video-card h4 { font-size: 0.875rem !important; }
+            .hero-text { font-size: 1.75rem !important; }
+            .hero-desc { font-size: 0.875rem !important; }
+            .category-title { font-size: 1.25rem !important; }
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white min-h-screen">
+    
+    <!-- Loading Overlay -->
+    <div id="loadingOverlay" class="loading-overlay">
+        <div class="loading-spinner"></div>
+        <p class="text-green-400 font-medium">Caricamento Cestistica TV...</p>
+    </div>
+
+    <!-- Firebase Config Modal -->
+    <div id="firebaseConfigModal" class="fixed inset-0 bg-black/95 z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-2xl w-full mx-4 border border-green-600/30 max-h-[90vh] overflow-y-auto">
+            <div class="text-center mb-6">
+                <div class="text-5xl mb-4">🔥</div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">Configurazione Firebase</h1>
+                <p class="text-gray-400 text-sm mt-2">Per rendere il sito dinamico, configura Firebase</p>
+            </div>
+            
+            <div class="bg-gray-700 rounded-lg p-4 mb-6">
+                <h3 class="font-bold text-green-400 mb-2">📋 Istruzioni:</h3>
+                <ol class="text-sm text-gray-300 space-y-2">
+                    <li>1. Vai su <a href="https://console.firebase.google.com" target="_blank" class="text-green-400 underline">console.firebase.google.com</a></li>
+                    <li>2. Crea un nuovo progetto (es. "cestistica-tv")</li>
+                    <li>3. Vai su "Realtime Database" → "Crea database" → Scegli "Modalità test"</li>
+                    <li>4. Vai su "Impostazioni progetto" → "Le tue app" → Clicca sull'icona Web (&lt;/&gt;)</li>
+                    <li>5. Registra l'app e copia i valori della configurazione qui sotto</li>
+                </ol>
+            </div>
+            
+            <div class="space-y-3">
+                <input type="text" id="cfgApiKey" placeholder="apiKey" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+                <input type="text" id="cfgAuthDomain" placeholder="authDomain (es. progetto.firebaseapp.com)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+                <input type="text" id="cfgDatabaseURL" placeholder="databaseURL (es. https://progetto-default-rtdb.europe-west1.firebasedatabase.app)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+                <input type="text" id="cfgProjectId" placeholder="projectId" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+                <input type="text" id="cfgStorageBucket" placeholder="storageBucket (es. progetto.appspot.com)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+                <input type="text" id="cfgMessagingSenderId" placeholder="messagingSenderId" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+                <input type="text" id="cfgAppId" placeholder="appId" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm">
+            </div>
+            
+            <button onclick="saveFirebaseConfig()" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition mt-6">💾 Salva Configurazione</button>
+            
+            <div class="mt-4 text-center">
+                <button onclick="useDemoMode()" class="text-gray-400 text-sm hover:text-green-400 underline">Usa modalità demo (solo locale)</button>
+            </div>
+            
+            <p id="configError" class="text-red-400 text-center mt-3 text-sm hidden"></p>
+        </div>
+    </div>
+
+    <!-- Login/Register Modal -->
+    <div id="authModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center overflow-y-auto py-8 hidden">
+        <div class="bg-gray-800 p-6 md:p-8 rounded-2xl max-w-md w-full mx-4 border border-green-600/30">
+            <div class="text-center mb-6">
+                <img id="authLogo" src="" alt="Cestistica TV" class="h-16 mx-auto mb-4 hidden">
+                <div id="authLogoPlaceholder" class="text-5xl mb-2">🏀</div>
+                <h1 class="text-2xl md:text-3xl font-bold text-white">Cestistica TV</h1>
+                <p class="text-green-400 font-medium mt-1">cestistica tv+</p>
+                <p class="text-gray-400 text-sm mt-2">Il Club Channel Biancoverde</p>
+            </div>
+            
+            <div id="loginForm">
+                <h2 class="text-xl font-semibold mb-4 text-center">Accedi</h2>
+                <input type="text" id="loginUsername" placeholder="Username" class="w-full p-3 rounded-lg bg-gray-700 mb-3 border border-gray-600 focus:border-green-500">
+                <input type="password" id="loginPassword" placeholder="Password" class="w-full p-3 rounded-lg bg-gray-700 mb-4 border border-gray-600 focus:border-green-500">
+                <button onclick="login()" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">Accedi</button>
+                <p class="text-center mt-4 text-gray-400 text-sm">Non hai un account? <span onclick="showRegister()" class="text-green-400 cursor-pointer hover:underline">Registrati gratis</span></p>
+            </div>
+            
+            <div id="registerForm" class="hidden">
+                <h2 class="text-xl font-semibold mb-4 text-center">Registrati a cestistica tv+</h2>
+                <p class="text-center text-green-400 text-sm mb-4">✓ 100% Gratuito per sempre</p>
+                <div class="grid grid-cols-2 gap-3 mb-3">
+                    <input type="text" id="regNome" placeholder="Nome" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                    <input type="text" id="regCognome" placeholder="Cognome" class="w-full p-3 rounded-lg bg-gray-700 border border-gray-600">
+                </div>
+                <input type="text" id="regUsername" placeholder="Username" class="w-full p-3 rounded-lg bg-gray-700 mb-3 border border-gray-600">
+                <input type="email" id="regEmail" placeholder="Email" class="w-full p-3 rounded-lg bg-gray-700 mb-3 border border-gray-600">
+                <input type="password" id="regPassword" placeholder="Password" class="w-full p-3 rounded-lg bg-gray-700 mb-4 border border-gray-600">
+                <button onclick="register()" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">Iscriviti Gratis</button>
+                <p class="text-center mt-4 text-gray-400 text-sm">Hai già un account? <span onclick="showLogin()" class="text-green-400 cursor-pointer hover:underline">Accedi</span></p>
+            </div>
+            <p id="authError" class="text-red-400 text-center mt-3 text-sm hidden"></p>
+        </div>
+    </div>
+
+    <!-- Mobile Menu Overlay -->
+    <div id="mobileMenuOverlay" class="fixed inset-0 bg-black/70 z-40 hidden" onclick="closeMobileMenu()"></div>
+    
+    <!-- Mobile Menu -->
+    <div id="mobileMenu" class="mobile-menu fixed top-0 left-0 h-full w-72 bg-gray-800 z-50 p-6">
+        <div class="flex items-center justify-between mb-8">
+            <div class="flex items-center gap-2">
+                <img id="mobileLogo" src="" alt="Logo" class="h-10 hidden">
+                <span class="text-xl font-bold text-green-400">Menu</span>
+            </div>
+            <button onclick="closeMobileMenu()" class="text-gray-400 hover:text-white">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+        <nav class="space-y-4">
+            <button onclick="showHome(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
+                Home
+            </button>
+            <button onclick="filterCategory('live'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse"></span>
+                Live
+            </button>
+            <button onclick="filterCategory('replays'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                🎬 Full Match
+            </button>
+            <button onclick="filterCategory('highlights'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                ⚡ Highlights
+            </button>
+            <button onclick="filterCategory('altro'); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                📺 Altro
+            </button>
+            <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                ❤️ La Mia Lista
+            </button>
+            <hr class="border-gray-700 my-4">
+            <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">
+                👤 Dettagli Utente
+            </button>
+            <button onclick="showAdmin(); closeMobileMenu();" id="mobileAdminBtn" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 hidden">
+                ⚙️ Admin Panel
+            </button>
+            <button onclick="logout()" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 text-red-400">
+                🚪 Esci
+            </button>
+        </nav>
+    </div>
+
+    <!-- User Details Modal -->
+    <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30">
+            <div class="flex items-center justify-between mb-6">
+                <h3 class="text-xl font-bold">👤 Dettagli Utente</h3>
+                <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="flex items-center gap-4 mb-6">
+                    <div id="userAvatar" class="w-16 h-16 bg-green-600 rounded-full flex items-center justify-center text-2xl font-bold"></div>
+                    <div>
+                        <p id="userFullName" class="font-semibold text-lg"></p>
+                        <p class="text-green-400 text-sm">cestistica tv+ Member</p>
+                    </div>
+                </div>
+                <div class="bg-gray-700 rounded-lg p-4 space-y-3">
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Username:</span>
+                        <span id="userUsername" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Email:</span>
+                        <span id="userEmail" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Membro dal:</span>
+                        <span id="userDate" class="font-medium"></span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="text-gray-400">Tipo Account:</span>
+                        <span id="userType" class="font-medium"></span>
+                    </div>
+                </div>
+            </div>
+            <button onclick="closeUserDetails()" class="w-full mt-6 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition">Chiudi</button>
+        </div>
+    </div>
+
+    <!-- Main App -->
+    <div id="mainApp" class="hidden">
+        <!-- Sync Indicator -->
+        <div id="syncIndicator" class="sync-indicator online hidden">
+            <span id="syncDot" class="w-2 h-2 bg-white rounded-full"></span>
+            <span id="syncText">Sincronizzato</span>
+        </div>
+
+        <!-- Header -->
+        <header class="fixed top-0 left-0 right-0 z-40 bg-gradient-to-b from-black/95 to-transparent">
+            <div class="container mx-auto px-4 py-3 md:py-4 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <button onclick="openMobileMenu()" class="md:hidden p-2 hover:bg-gray-700 rounded-lg">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path></svg>
+                    </button>
+                    <div class="flex items-center gap-2 cursor-pointer" onclick="showHome()">
+                        <img id="headerLogo" src="" alt="Logo" class="h-10 md:h-12 hidden">
+                        <span id="headerLogoEmoji" class="text-3xl md:text-4xl">🏀</span>
+                    </div>
+                    <nav class="hidden lg:flex gap-4 xl:gap-6 ml-6">
+                        <button onclick="showHome()" class="hover:text-green-400 transition font-medium text-sm">Home</button>
+                        <button onclick="filterCategory('live')" class="hover:text-green-400 transition text-sm">Live</button>
+                        <button onclick="filterCategory('replays')" class="hover:text-green-400 transition text-sm">Full Match</button>
+                        <button onclick="filterCategory('highlights')" class="hover:text-green-400 transition text-sm">Highlights</button>
+                        <button onclick="filterCategory('altro')" class="hover:text-green-400 transition text-sm">Altro</button>
+                        <button onclick="showWatchlist()" class="hover:text-green-400 transition text-sm">La Mia Lista</button>
+                    </nav>
+                </div>
+                
+                <div class="flex items-center gap-2 md:gap-4">
+                    <div class="relative">
+                        <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        <input type="text" id="searchInput" placeholder="Cerca..." class="bg-gray-800 pl-10 pr-4 py-2 rounded-full text-sm w-32 md:w-48 border border-gray-700 focus:border-green-500" onkeyup="searchVideos()">
+                    </div>
+                    <div class="relative group">
+                        <button class="flex items-center gap-1 md:gap-2 bg-green-600 px-3 md:px-4 py-2 rounded-full text-sm">
+                            <span id="currentUser" class="font-medium hidden md:inline"></span>
+                            <span id="currentUserMobile" class="font-medium md:hidden"></span>
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        </button>
+                        <div class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl hidden group-hover:block border border-gray-700">
+                            <button onclick="showUserDetails()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-t-lg">👤 Dettagli Utente</button>
+                            <button onclick="showAdmin()" id="adminBtn" class="w-full text-left px-4 py-3 hover:bg-gray-700 hidden">⚙️ Admin Panel</button>
+                            <button onclick="logout()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-b-lg text-red-400">🚪 Esci</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Home Content -->
+        <main id="homeContent" class="pt-16 md:pt-20">
+            <div id="heroSection" class="relative h-[50vh] md:h-[70vh] bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1546519638-68e109498ffc?w=1600');">
+                <div class="absolute inset-0 bg-gradient-to-r from-black/90 via-black/60 to-transparent"></div>
+                <div class="hero-gradient absolute inset-0"></div>
+                <div class="absolute bottom-8 md:bottom-20 left-4 md:left-8 right-4 max-w-2xl">
+                    <span class="bg-green-600 px-2 md:px-3 py-1 rounded-full text-xs md:text-sm font-medium mb-3 md:mb-4 inline-block">🏀 Cestistica Savonese</span>
+                    <h2 class="hero-text text-3xl md:text-5xl font-bold mb-2 md:mb-4">Benvenuto su Cestistica TV</h2>
+                    <p class="hero-desc text-sm md:text-lg text-gray-300 mb-4 md:mb-6 line-clamp-2 md:line-clamp-none">Il club channel ufficiale della Cestistica Savonese. Guarda partite live, full match replays, highlights e contenuti esclusivi!</p>
+                    <div class="flex gap-2 md:gap-4">
+                        <button onclick="playFeatured()" class="gradient-bg px-4 md:px-8 py-2 md:py-3 rounded-lg font-semibold flex items-center gap-2 hover:opacity-90 transition text-sm md:text-base">
+                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path></svg>
+                            Guarda Ora
+                        </button>
+                        <button onclick="showWatchlist()" class="bg-gray-700/80 px-4 md:px-8 py-2 md:py-3 rounded-lg font-semibold flex items-center gap-2 hover:bg-gray-600 transition text-sm md:text-base">
+                            <svg class="w-5 h-5 md:w-6 md:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                            <span class="hidden md:inline">La Mia Lista</span>
+                            <span class="md:hidden">Lista</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="px-4 md:px-8 -mt-12 md:-mt-20 relative z-10 pb-20">
+                <section id="liveSection" class="mb-8 md:mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4 flex items-center gap-2">
+                        <span class="w-3 h-3 bg-red-500 rounded-full animate-pulse-slow"></span> Live
+                    </h3>
+                    <div id="liveVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                </section>
+
+                <section id="replaysSection" class="mb-8 md:mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4">🎬 Full Match Replays</h3>
+                    <div id="replaysVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                </section>
+
+                <section id="highlightsSection" class="mb-8 md:mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4">⚡ Highlights</h3>
+                    <div id="highlightsVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                </section>
+
+                <section id="altroSection" class="mb-8 md:mb-12">
+                    <h3 class="category-title text-xl md:text-2xl font-bold mb-3 md:mb-4">📺 Altro</h3>
+                    <div id="altroVideos" class="flex gap-3 md:gap-4 overflow-x-auto pb-4 custom-scrollbar category-scroll"></div>
+                </section>
+            </div>
+        </main>
+
+        <!-- Video Player Page -->
+        <div id="videoPage" class="hidden pt-16 md:pt-20 pb-20">
+            <div class="container mx-auto px-4">
+                <button onclick="showHome()" class="mb-4 flex items-center gap-2 text-green-400 hover:underline text-sm md:text-base">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"></path></svg>
+                    Torna alla Home
+                </button>
+                
+                <div class="grid lg:grid-cols-3 gap-6 md:gap-8">
+                    <div class="lg:col-span-2">
+                        <div class="aspect-video bg-black rounded-xl overflow-hidden shadow-2xl">
+                            <iframe id="videoPlayer" class="w-full h-full" frameborder="0" allowfullscreen allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"></iframe>
+                        </div>
+                        
+                        <div class="mt-4 md:mt-6">
+                            <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+                                <div>
+                                    <h2 id="videoTitle" class="text-xl md:text-2xl font-bold"></h2>
+                                    <p id="videoCategory" class="text-green-400 mt-1 text-sm md:text-base"></p>
+                                    <p id="videoDate" class="text-gray-400 text-sm mt-1"></p>
+                                </div>
+                                <button id="watchlistBtn" onclick="toggleWatchlist()" class="flex items-center justify-center gap-2 bg-gray-700 px-4 py-2 rounded-lg hover:bg-gray-600 transition text-sm md:text-base">
+                                    <svg id="watchlistIcon" class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                                    <span id="watchlistText">Aggiungi alla Lista</span>
+                                </button>
+                            </div>
+                            <p id="videoDescription" class="text-gray-300 mt-4 text-sm md:text-base"></p>
+                        </div>
+
+                        <div class="mt-6 md:mt-8 bg-gray-800 rounded-xl p-4 md:p-6">
+                            <h3 class="text-lg md:text-xl font-bold mb-4">💬 Commenti</h3>
+                            <div class="flex flex-col md:flex-row gap-3 md:gap-4 mb-6">
+                                <input type="text" id="commentInput" placeholder="Scrivi un commento..." class="flex-1 bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 text-sm md:text-base">
+                                <button onclick="addComment()" class="gradient-bg px-6 py-3 rounded-lg font-semibold hover:opacity-90 transition text-sm md:text-base">Invia</button>
+                            </div>
+                            <div id="commentsList" class="space-y-4"></div>
+                        </div>
+                    </div>
+
+                    <div>
+                        <h3 class="text-lg md:text-xl font-bold mb-4">Video Correlati</h3>
+                        <div id="relatedVideos" class="space-y-3 md:space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Watchlist Page -->
+        <div id="watchlistPage" class="hidden pt-20 md:pt-24 pb-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold mb-4 md:mb-6">❤️ La Mia Lista</h2>
+                <div id="watchlistVideos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4"></div>
+                <p id="emptyWatchlist" class="text-gray-400 text-center py-12 md:py-20 hidden">La tua lista è vuota. Aggiungi video cliccando sul cuore!</p>
+            </div>
+        </div>
+
+        <!-- Admin Panel -->
+        <div id="adminPage" class="hidden pt-20 md:pt-24 pb-20">
+            <div class="container mx-auto px-4">
+                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
+                    <h2 class="text-2xl md:text-3xl font-bold">⚙️ Admin Panel</h2>
+                    <div class="flex items-center gap-2">
+                        <span id="dbStatus" class="text-sm px-3 py-1 rounded-full bg-green-600">🔥 Firebase Connesso</span>
+                    </div>
+                </div>
+                
+                <div class="grid lg:grid-cols-2 gap-6 md:gap-8">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold mb-4">➕ Aggiungi Nuovo Video</h3>
+                        <input type="text" id="newVideoTitle" placeholder="Titolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm md:text-base">
+                        <input type="text" id="newVideoUrl" placeholder="URL YouTube (video, live, shorts)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm md:text-base">
+                        <textarea id="newVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-24 text-sm md:text-base"></textarea>
+                        <select id="newVideoCategory" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm md:text-base">
+                            <option value="live">Live</option>
+                            <option value="replays">Full Match Replays</option>
+                            <option value="highlights">Highlights</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                        <input type="text" id="newVideoThumbnail" placeholder="URL Thumbnail (opzionale - auto da YouTube)" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-4 border border-gray-600 text-sm md:text-base">
+                        <button onclick="addVideo()" class="w-full gradient-bg py-3 rounded-lg font-semibold hover:opacity-90 transition">Aggiungi Video</button>
+                    </div>
+
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg md:text-xl font-bold mb-4">🖼️ Logo del Sito</h3>
+                        <div class="border-2 border-dashed border-gray-600 rounded-xl p-6 md:p-8 text-center">
+                            <img id="logoPreview" src="" alt="Logo Preview" class="h-20 md:h-24 mx-auto mb-4 hidden">
+                            <p class="text-gray-400 mb-4 text-sm md:text-base">Carica il logo della Cestistica Savonese</p>
+                            <input type="file" id="logoInput" accept="image/*" onchange="uploadLogo(event)" class="hidden">
+                            <div class="flex flex-col md:flex-row gap-2 justify-center">
+                                <button onclick="document.getElementById('logoInput').click()" class="bg-green-600 px-6 py-2 rounded-lg hover:bg-green-700 transition text-sm">Seleziona Immagine</button>
+                                <button onclick="removeLogo()" class="bg-red-600 px-6 py-2 rounded-lg hover:bg-red-700 transition text-sm">Rimuovi</button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 rounded-xl p-4 md:p-6 mt-6 md:mt-8">
+                    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+                        <h3 class="text-lg md:text-xl font-bold">📹 Gestione Video</h3>
+                        <button onclick="refreshVideos()" class="gradient-bg px-6 py-2 rounded-lg font-semibold hover:opacity-90 transition flex items-center justify-center gap-2 text-sm md:text-base">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path></svg>
+                            Aggiorna Lista
+                        </button>
+                    </div>
+                    <div id="adminVideoList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- Edit Video Modal -->
+                <div id="editVideoModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4 overflow-y-auto">
+                    <div class="bg-gray-800 p-4 md:p-6 rounded-2xl max-w-lg w-full border border-green-600/30 my-8">
+                        <div class="flex items-center justify-between mb-4">
+                            <h3 class="text-lg md:text-xl font-bold">✏️ Modifica Video</h3>
+                            <button onclick="closeEditModal()" class="text-gray-400 hover:text-white">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                            </button>
+                        </div>
+                        <input type="hidden" id="editVideoId">
+                        <label class="block text-sm text-gray-400 mb-1">Titolo</label>
+                        <input type="text" id="editVideoTitle" placeholder="Titolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
+                        <label class="block text-sm text-gray-400 mb-1">URL YouTube</label>
+                        <input type="text" id="editVideoUrl" placeholder="URL YouTube" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
+                        <label class="block text-sm text-gray-400 mb-1">Descrizione</label>
+                        <textarea id="editVideoDesc" placeholder="Descrizione" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 h-20 text-sm"></textarea>
+                        <label class="block text-sm text-gray-400 mb-1">Categoria</label>
+                        <select id="editVideoCategory" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
+                            <option value="live">Live</option>
+                            <option value="replays">Full Match Replays</option>
+                            <option value="highlights">Highlights</option>
+                            <option value="altro">Altro</option>
+                        </select>
+                        <label class="block text-sm text-gray-400 mb-1">URL Thumbnail</label>
+                        <input type="text" id="editVideoThumbnail" placeholder="URL Thumbnail" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-3 border border-gray-600 text-sm">
+                        <label class="block text-sm text-gray-400 mb-1">Data</label>
+                        <input type="date" id="editVideoDate" class="w-full bg-gray-700 px-4 py-3 rounded-lg mb-4 border border-gray-600 text-sm">
+                        <div class="flex flex-col md:flex-row gap-3">
+                            <button onclick="saveVideoEdit()" class="flex-1 gradient-bg py-3 rounded-lg font-semibold hover:opacity-90 transition text-sm">💾 Salva Modifiche</button>
+                            <button onclick="closeEditModal()" class="flex-1 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition text-sm">Annulla</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-gray-800 rounded-xl p-4 md:p-6 mt-6 md:mt-8">
+                    <h3 class="text-lg md:text-xl font-bold mb-4">👥 Membri Registrati (cestistica tv+)</h3>
+                    <div id="membersList" class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead class="bg-gray-700">
+                                <tr>
+                                    <th class="px-3 md:px-4 py-3 text-left">Nome</th>
+                                    <th class="px-3 md:px-4 py-3 text-left">Username</th>
+                                    <th class="px-3 md:px-4 py-3 text-left hidden md:table-cell">Email</th>
+                                    <th class="px-3 md:px-4 py-3 text-left hidden md:table-cell">Data</th>
+                                    <th class="px-3 md:px-4 py-3 text-left">Tipo</th>
+                                </tr>
+                            </thead>
+                            <tbody id="membersTableBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <footer class="bg-gray-900 border-t border-gray-800 py-6 md:py-8 mt-auto">
+        <div class="container mx-auto px-4 text-center">
+            <p class="text-gray-400 text-sm md:text-base">© 2024 Cestistica TV - Club Channel Biancoverde</p>
+            <p class="text-green-400 text-xs md:text-sm mt-2">cestistica tv+ | Membership Gratuita</p>
+        </div>
+    </footer>
+
+    <script>
+        // State
+        let currentUser = null;
+        let currentVideo = null;
+        let db = null;
+        let isFirebaseMode = false;
+        let videosCache = [];
+        let usersCache = [];
+
+        // Default data
+        const defaultVideos = [
+            { id: 'v1', title: "Cestistica Savonese vs Riviera Live", category: "live", url: "https://www.youtube.com/live/3qNXZPCmxf8", thumbnail: "https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400", description: "Partita live del campionato regionale", date: "2024-01-15", comments: [] },
+            { id: 'v2', title: "Full Match: Cestistica vs Albenga", category: "replays", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumbnail: "https://images.unsplash.com/photo-1559692048-79a3f837883d?w=400", description: "Replay completo della partita casalinga", date: "2024-01-10", comments: [] },
+            { id: 'v3', title: "Top 10 Giocate Stagione", category: "highlights", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumbnail: "https://images.unsplash.com/photo-1574623452334-1e0ac2b3ccb4?w=400", description: "Le migliori giocate della stagione biancoverde", date: "2024-01-08", comments: [] },
+            { id: 'v4', title: "Intervista Coach", category: "altro", url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ", thumbnail: "https://images.unsplash.com/photo-1504450758481-7338bbe7f5a0?w=400", description: "Intervista esclusiva al nostro coach", date: "2024-01-05", comments: [] }
+        ];
+
+        const defaultUsers = [
+            { id: 'admin1', username: 'tatte13', password: 'Matteo13', email: 'admin@cestistica.tv', nome: 'Admin', cognome: 'Cestistica', isAdmin: true, date: '2024-01-01' }
+        ];
+
+        // Firebase Configuration
+        function checkFirebaseConfig() {
+            const config = localStorage.getItem('cesticaFirebaseConfig');
+            if (config) {
+                try {
+                    initFirebase(JSON.parse(config));
+                } catch (e) {
+                    showFirebaseConfigModal();
+                }
+            } else {
+                showFirebaseConfigModal();
+            }
+        }
+
+        function showFirebaseConfigModal() {
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            document.getElementById('firebaseConfigModal').classList.remove('hidden');
+        }
+
+        function saveFirebaseConfig() {
+            const config = {
+                apiKey: document.getElementById('cfgApiKey').value,
+                authDomain: document.getElementById('cfgAuthDomain').value,
+                databaseURL: document.getElementById('cfgDatabaseURL').value,
+                projectId: document.getElementById('cfgProjectId').value,
+                storageBucket: document.getElementById('cfgStorageBucket').value,
+                messagingSenderId: document.getElementById('cfgMessagingSenderId').value,
+                appId: document.getElementById('cfgAppId').value
+            };
+
+            if (!config.apiKey || !config.databaseURL || !config.projectId) {
+                document.getElementById('configError').textContent = 'Inserisci almeno apiKey, databaseURL e projectId';
+                document.getElementById('configError').classList.remove('hidden');
+                return;
+            }
+
+            localStorage.setItem('cesticaFirebaseConfig', JSON.stringify(config));
+            document.getElementById('firebaseConfigModal').classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.remove('hidden');
+            initFirebase(config);
+        }
+
+        function useDemoMode() {
+            isFirebaseMode = false;
+            document.getElementById('firebaseConfigModal').classList.add('hidden');
+            document.getElementById('loadingOverlay').classList.add('hidden');
+            
+            // Init with localStorage
+            if (!localStorage.getItem('cesticaVideos')) {
+                localStorage.setItem('cesticaVideos', JSON.stringify(defaultVideos));
+            }
+            if (!localStorage.getItem('cesticaUsers')) {
+                localStorage.setItem('cesticaUsers', JSON.stringify(defaultUsers));
+            }
+            
+            checkSession();
+        }
+
+        function initFirebase(config) {
+            try {
+                if (!firebase.apps.length) {
+                    firebase.initializeApp(config);
+                }
+                db = firebase.database();
+                isFirebaseMode = true;
+
+                // Initialize default data if empty
+                db.ref('videos').once('value').then(snapshot => {
+                    if (!snapshot.exists()) {
+                        defaultVideos.forEach(v => {
+                            db.ref('videos/' + v.id).set(v);
+                        });
+                    }
+                });
+
+                db.ref('users').once('value').then(snapshot => {
+                    if (!snapshot.exists()) {
+                        defaultUsers.forEach(u => {
+                            db.ref('users/' + u.id).set(u);
+                        });
+                    }
+                });
+
+                // Listen for real-time updates
+                db.ref('videos').on('value', snapshot => {
+                    videosCache = [];
+                    snapshot.forEach(child => {
+                        videosCache.push({ ...child.val(), id: child.key });
+                    });
+                    if (currentUser) loadVideos();
+                    showSyncStatus(true);
+                });
+
+                db.ref('users').on('value', snapshot => {
+                    usersCache = [];
+                    snapshot.forEach(child => {
+                        usersCache.push({ ...child.val(), id: child.key });
+                    });
+                    if (currentUser && currentUser.isAdmin) loadMembersList();
+                });
+
+                db.ref('settings/logo').on('value', snapshot => {
+                    if (snapshot.exists()) {
+                        applyLogo(snapshot.val());
+                    }
+                });
+
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                document.getElementById('firebaseConfigModal').classList.add('hidden');
+                document.getElementById('syncIndicator').classList.remove('hidden');
+                checkSession();
+
+            } catch (e) {
+                console.error('Firebase error:', e);
+                document.getElementById('configError').textContent = 'Errore di connessione: ' + e.message;
+                document.getElementById('configError').classList.remove('hidden');
+                document.getElementById('loadingOverlay').classList.add('hidden');
+                showFirebaseConfigModal();
+            }
+        }
+
+        function showSyncStatus(online) {
+            const indicator = document.getElementById('syncIndicator');
+            const dot = document.getElementById('syncDot');
+            const text = document.getElementById('syncText');
+            
+            if (online) {
+                indicator.className = 'sync-indicator online';
+                text.textContent = 'Sincronizzato';
+            } else {
+                indicator.className = 'sync-indicator offline';
+                text.textContent = 'Offline';
+            }
+        }
+
+        // Data access functions
+        function getVideos() {
+            if (isFirebaseMode) {
+                return videosCache;
+            }
+            return JSON.parse(localStorage.getItem('cesticaVideos') || '[]');
+        }
+
+        function getUsers() {
+            if (isFirebaseMode) {
+                return usersCache;
+            }
+            return JSON.parse(localStorage.getItem('cesticaUsers') || '[]');
+        }
+
+        function saveVideo(video) {
+            if (isFirebaseMode) {
+                return db.ref('videos/' + video.id).set(video);
+            }
+            const videos = getVideos();
+            const idx = videos.findIndex(v => v.id === video.id);
+            if (idx >= 0) videos[idx] = video;
+            else videos.push(video);
+            localStorage.setItem('cesticaVideos', JSON.stringify(videos));
+        }
+
+        function deleteVideoFromDB(id) {
+            if (isFirebaseMode) {
+                return db.ref('videos/' + id).remove();
+            }
+            let videos = getVideos();
+            videos = videos.filter(v => v.id !== id);
+            localStorage.setItem('cesticaVideos', JSON.stringify(videos));
+        }
+
+        function saveUser(user) {
+            if (isFirebaseMode) {
+                return db.ref('users/' + user.id).set(user);
+            }
+            const users = getUsers();
+            const idx = users.findIndex(u => u.id === user.id);
+            if (idx >= 0) users[idx] = user;
+            else users.push(user);
+            localStorage.setItem('cesticaUsers', JSON.stringify(users));
+        }
+
+        function saveLogo(logoData) {
+            if (isFirebaseMode) {
+                return db.ref('settings/logo').set(logoData);
+            }
+            localStorage.setItem('cesticaLogo', logoData);
+            applyLogo(logoData);
+        }
+
+        function removeLogo() {
+            if (isFirebaseMode) {
+                db.ref('settings/logo').remove();
+            }
+            localStorage.removeItem('cesticaLogo');
+            applyLogo(null);
+            showNotification('Logo rimosso');
+        }
+
+        function applyLogo(logo) {
+            const elements = ['headerLogo', 'authLogo', 'logoPreview', 'mobileLogo'];
+            const placeholders = ['headerLogoEmoji', 'authLogoPlaceholder'];
+            
+            if (logo) {
+                elements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) { el.src = logo; el.classList.remove('hidden'); }
+                });
+                placeholders.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+            } else {
+                elements.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.add('hidden');
+                });
+                placeholders.forEach(id => {
+                    const el = document.getElementById(id);
+                    if (el) el.classList.remove('hidden');
+                });
+            }
+        }
+
+        // Mobile Menu
+        function openMobileMenu() {
+            document.getElementById('mobileMenu').classList.add('open');
+            document.getElementById('mobileMenuOverlay').classList.remove('hidden');
+            document.body.style.overflow = 'hidden';
+        }
+
+        function closeMobileMenu() {
+            document.getElementById('mobileMenu').classList.remove('open');
+            document.getElementById('mobileMenuOverlay').classList.add('hidden');
+            document.body.style.overflow = '';
+        }
+
+        // User Details
+        function showUserDetails() {
+            if (!currentUser) return;
+            document.getElementById('userAvatar').textContent = currentUser.username.charAt(0).toUpperCase();
+            document.getElementById('userFullName').textContent = `${currentUser.nome || ''} ${currentUser.cognome || ''}`.trim() || currentUser.username;
+            document.getElementById('userUsername').textContent = currentUser.username;
+            document.getElementById('userEmail').textContent = currentUser.email;
+            document.getElementById('userDate').textContent = currentUser.date;
+            document.getElementById('userType').innerHTML = currentUser.isAdmin ? '<span class="text-yellow-400">Admin</span>' : '<span class="text-green-400">cestistica tv+</span>';
+            document.getElementById('userDetailsModal').classList.remove('hidden');
+        }
+
+        function closeUserDetails() {
+            document.getElementById('userDetailsModal').classList.add('hidden');
+        }
+
+        // Auth
+        function login() {
+            const username = document.getElementById('loginUsername').value;
+            const password = document.getElementById('loginPassword').value;
+            const users = getUsers();
+            const user = users.find(u => u.username === username && u.password === password);
+            
+            if (user) {
+                currentUser = user;
+                localStorage.setItem('cesticaCurrentUser', JSON.stringify(user));
+                document.getElementById('authModal').classList.add('hidden');
+                document.getElementById('mainApp').classList.remove('hidden');
+                document.getElementById('currentUser').textContent = user.username;
+                document.getElementById('currentUserMobile').textContent = user.username.substring(0, 2).toUpperCase();
+                if (user.isAdmin) {
+                    document.getElementById('adminBtn').classList.remove('hidden');
+                    document.getElementById('mobileAdminBtn').classList.remove('hidden');
+                    document.getElementById('dbStatus').textContent = isFirebaseMode ? '🔥 Firebase Connesso' : '💾 Modalità Locale';
+                }
+                loadVideos();
+                loadLogo();
+            } else {
+                showAuthError('Username o password non corretti');
+            }
+        }
+
+        function register() {
+            const nome = document.getElementById('regNome').value;
+            const cognome = document.getElementById('regCognome').value;
+            const username = document.getElementById('regUsername').value;
+            const email = document.getElementById('regEmail').value;
+            const password = document.getElementById('regPassword').value;
+            
+            if (!nome || !cognome || !username || !email || !password) {
+                showAuthError('Compila tutti i campi');
+                return;
+            }
+            
+            const users = getUsers();
+            if (users.find(u => u.username === username)) {
+                showAuthError('Username già esistente');
+                return;
+            }
+            
+            const newUser = { 
+                id: 'user_' + Date.now(),
+                username, email, password, nome, cognome, 
+                isAdmin: false, 
+                date: new Date().toISOString().split('T')[0] 
+            };
+            
+            saveUser(newUser);
+            currentUser = newUser;
+            localStorage.setItem('cesticaCurrentUser', JSON.stringify(newUser));
+            
+            showNotification(`🎉 Benvenuto ${nome}! Registrazione completata`);
+            
+            document.getElementById('authModal').classList.add('hidden');
+            document.getElementById('mainApp').classList.remove('hidden');
+            document.getElementById('currentUser').textContent = newUser.username;
+            document.getElementById('currentUserMobile').textContent = newUser.username.substring(0, 2).toUpperCase();
+            loadVideos();
+            loadLogo();
+        }
+
+        function logout() {
+            localStorage.removeItem('cesticaCurrentUser');
+            location.reload();
+        }
+
+        function showLogin() {
+            document.getElementById('loginForm').classList.remove('hidden');
+            document.getElementById('registerForm').classList.add('hidden');
+        }
+
+        function showRegister() {
+            document.getElementById('loginForm').classList.add('hidden');
+            document.getElementById('registerForm').classList.remove('hidden');
+        }
+
+        function showAuthError(msg) {
+            const el = document.getElementById('authError');
+            el.textContent = msg;
+            el.classList.remove('hidden');
+            setTimeout(() => el.classList.add('hidden'), 3000);
+        }
+
+        // YouTube helpers
+        function extractYouTubeId(url) {
+            if (!url) return '';
+            const patterns = [
+                /youtube\.com\/watch\?v=([^&]+)/,
+                /youtu\.be\/([^?]+)/,
+                /youtube\.com\/live\/([^?]+)/,
+                /youtube\.com\/shorts\/([^?]+)/,
+                /youtube\.com\/embed\/([^?]+)/
+            ];
+            for (const p of patterns) {
+                const m = url.match(p);
+                if (m) return m[1];
+            }
+            return '';
+        }
+
+        // Videos
+        function loadVideos() {
+            const videos = getVideos();
+            
+            ['live', 'replays', 'highlights', 'altro'].forEach(cat => {
+                const container = document.getElementById(cat + 'Videos');
+                const catVideos = videos.filter(v => v.category === cat);
+                
+                if (catVideos.length === 0) {
+                    container.innerHTML = '<p class="text-gray-500 py-8 text-sm">Nessun video in questa categoria</p>';
+                } else {
+                    container.innerHTML = catVideos.map(v => createVideoCard(v)).join('');
+                }
+            });
+        }
+
+        function createVideoCard(video) {
+            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
+            const userWatchlist = watchlist[currentUser?.username] || [];
+            const inWatchlist = userWatchlist.includes(video.id);
+            
+            return `
+                <div class="video-card min-w-[160px] md:min-w-[280px] bg-gray-800 rounded-xl overflow-hidden cursor-pointer card-hover" onclick="playVideo('${video.id}')">
+                    <div class="relative">
+                        <img src="${video.thumbnail}" alt="${video.title}" class="w-full h-[100px] md:h-40 object-cover">
+                        <div class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition">
+                            <svg class="w-12 md:w-16 h-12 md:h-16 text-white" fill="currentColor" viewBox="0 0 20 20"><path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"></path></svg>
+                        </div>
+                        ${video.category === 'live' ? '<span class="absolute top-2 left-2 bg-red-600 px-2 py-1 rounded text-xs font-bold animate-pulse">LIVE</span>' : ''}
+                        <button onclick="event.stopPropagation(); quickToggleWatchlist('${video.id}')" class="absolute top-2 right-2 p-1.5 md:p-2 bg-black/60 rounded-full hover:bg-green-600 transition">
+                            <svg class="w-4 h-4 md:w-5 md:h-5 ${inWatchlist ? 'text-red-500 fill-current' : 'text-white'}" fill="${inWatchlist ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
+                        </button>
+                    </div>
+                    <div class="p-3 md:p-4">
+                        <h4 class="font-semibold truncate text-sm md:text-base">${video.title}</h4>
+                        <p class="text-xs md:text-sm text-gray-400 mt-1">${video.date}</p>
+                    </div>
+                </div>
+            `;
+        }
+
+        function playVideo(id) {
+            const videos = getVideos();
+            const video = videos.find(v => v.id === id);
+            if (!video) return;
+            
+            currentVideo = video;
+            const videoId = extractYouTubeId(video.url);
+            
+            document.getElementById('videoPlayer').src = `https://www.youtube.com/embed/${videoId}?autoplay=1`;
+            document.getElementById('videoTitle').textContent = video.title;
+            document.getElementById('videoCategory').textContent = getCategoryLabel(video.category);
+            document.getElementById('videoDate').textContent = video.date;
+            document.getElementById('videoDescription').textContent = video.description;
+            
+            updateWatchlistButton();
+            loadComments();
+            loadRelatedVideos(video.category, id);
+            
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('watchlistPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('videoPage').classList.remove('hidden');
+            window.scrollTo(0, 0);
+        }
+
+        function playFeatured() {
+            const videos = getVideos();
+            if (videos.length > 0) playVideo(videos[0].id);
+        }
+
+        function getCategoryLabel(cat) {
+            return { live: '🔴 Live', replays: '🎬 Full Match Replay', highlights: '⚡ Highlights', altro: '📺 Altro' }[cat] || cat;
+        }
+
+        function loadRelatedVideos(category, currentId) {
+            const videos = getVideos();
+            const related = videos.filter(v => v.category === category && v.id !== currentId).slice(0, 5);
+            
+            document.getElementById('relatedVideos').innerHTML = related.map(v => `
+                <div class="flex gap-3 bg-gray-800 rounded-lg overflow-hidden cursor-pointer hover:bg-gray-700 transition" onclick="playVideo('${v.id}')">
+                    <img src="${v.thumbnail}" alt="${v.title}" class="w-24 md:w-32 h-16 md:h-20 object-cover">
+                    <div class="py-2 pr-2">
+                        <h4 class="font-medium text-xs md:text-sm line-clamp-2">${v.title}</h4>
+                        <p class="text-xs text-gray-400 mt-1">${v.date}</p>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // Comments
+        function loadComments() {
+            const videos = getVideos();
+            const video = videos.find(v => v.id === currentVideo.id);
+            const comments = video?.comments || [];
+            
+            if (comments.length === 0) {
+                document.getElementById('commentsList').innerHTML = '<p class="text-gray-500 text-center py-8 text-sm">Nessun commento ancora. Sii il primo!</p>';
+            } else {
+                document.getElementById('commentsList').innerHTML = comments.map(c => `
+                    <div class="bg-gray-700 rounded-lg p-3 md:p-4">
+                        <div class="flex items-center gap-2 mb-2">
+                            <div class="w-7 h-7 md:w-8 md:h-8 bg-green-600 rounded-full flex items-center justify-center font-bold text-sm">${c.user.charAt(0).toUpperCase()}</div>
+                            <span class="font-medium text-sm">${c.user}</span>
+                            <span class="text-gray-400 text-xs">${c.date}</span>
+                        </div>
+                        <p class="text-gray-300 text-sm">${c.text}</p>
+                    </div>
+                `).join('');
+            }
+        }
+
+        function addComment() {
+            const text = document.getElementById('commentInput').value.trim();
+            if (!text) return;
+            
+            const videos = getVideos();
+            const video = videos.find(v => v.id === currentVideo.id);
+            if (!video.comments) video.comments = [];
+            
+            video.comments.unshift({
+                user: currentUser.username,
+                text: text,
+                date: new Date().toLocaleString('it-IT')
+            });
+            
+            saveVideo(video);
+            document.getElementById('commentInput').value = '';
+            
+            if (!isFirebaseMode) loadComments();
+        }
+
+        // Watchlist (stays local per user)
+        function toggleWatchlist() {
+            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
+            if (!watchlist[currentUser.username]) watchlist[currentUser.username] = [];
+            
+            const idx = watchlist[currentUser.username].indexOf(currentVideo.id);
+            if (idx > -1) watchlist[currentUser.username].splice(idx, 1);
+            else watchlist[currentUser.username].push(currentVideo.id);
+            
+            localStorage.setItem('cesticaWatchlist', JSON.stringify(watchlist));
+            updateWatchlistButton();
+        }
+
+        function quickToggleWatchlist(videoId) {
+            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
+            if (!watchlist[currentUser.username]) watchlist[currentUser.username] = [];
+            
+            const idx = watchlist[currentUser.username].indexOf(videoId);
+            if (idx > -1) watchlist[currentUser.username].splice(idx, 1);
+            else watchlist[currentUser.username].push(videoId);
+            
+            localStorage.setItem('cesticaWatchlist', JSON.stringify(watchlist));
+            loadVideos();
+        }
+
+        function updateWatchlistButton() {
+            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
+            const userWatchlist = watchlist[currentUser.username] || [];
+            const inWatchlist = userWatchlist.includes(currentVideo.id);
+            
+            document.getElementById('watchlistIcon').setAttribute('fill', inWatchlist ? 'currentColor' : 'none');
+            document.getElementById('watchlistIcon').classList.toggle('text-red-500', inWatchlist);
+            document.getElementById('watchlistText').textContent = inWatchlist ? 'Nella Mia Lista' : 'Aggiungi alla Lista';
+        }
+
+        function showWatchlist() {
+            const watchlist = JSON.parse(localStorage.getItem('cesticaWatchlist') || '{}');
+            const userWatchlist = watchlist[currentUser.username] || [];
+            const videos = getVideos();
+            const watchlistVideos = videos.filter(v => userWatchlist.includes(v.id));
+            
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            document.getElementById('watchlistPage').classList.remove('hidden');
+            
+            if (watchlistVideos.length === 0) {
+                document.getElementById('watchlistVideos').innerHTML = '';
+                document.getElementById('emptyWatchlist').classList.remove('hidden');
+            } else {
+                document.getElementById('emptyWatchlist').classList.add('hidden');
+                document.getElementById('watchlistVideos').innerHTML = watchlistVideos.map(v => createVideoCard(v)).join('');
+            }
+        }
+
+        // Navigation
+        function showHome() {
+            document.getElementById('videoPlayer').src = '';
+            document.getElementById('homeContent').classList.remove('hidden');
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('watchlistPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.add('hidden');
+            loadVideos();
+        }
+
+        function filterCategory(category) {
+            showHome();
+            setTimeout(() => {
+                document.getElementById(category + 'Section').scrollIntoView({ behavior: 'smooth' });
+            }, 100);
+        }
+
+        function searchVideos() {
+            const query = document.getElementById('searchInput').value.toLowerCase();
+            const videos = getVideos();
+            
+            if (query.length < 2) { loadVideos(); return; }
+            
+            const filtered = videos.filter(v => v.title.toLowerCase().includes(query) || v.description.toLowerCase().includes(query));
+            
+            ['live', 'replays', 'highlights', 'altro'].forEach(cat => {
+                const container = document.getElementById(cat + 'Videos');
+                const catVideos = filtered.filter(v => v.category === cat);
+                container.innerHTML = catVideos.length ? catVideos.map(v => createVideoCard(v)).join('') : '<p class="text-gray-500 py-4 text-sm">Nessun risultato</p>';
+            });
+        }
+
+        // Admin
+        function showAdmin() {
+            if (!currentUser.isAdmin) return;
+            
+            document.getElementById('homeContent').classList.add('hidden');
+            document.getElementById('videoPage').classList.add('hidden');
+            document.getElementById('watchlistPage').classList.add('hidden');
+            document.getElementById('adminPage').classList.remove('hidden');
+            
+            loadAdminVideoList();
+            loadMembersList();
+        }
+
+        function addVideo() {
+            const title = document.getElementById('newVideoTitle').value;
+            const url = document.getElementById('newVideoUrl').value;
+            const desc = document.getElementById('newVideoDesc').value;
+            const category = document.getElementById('newVideoCategory').value;
+            let thumbnail = document.getElementById('newVideoThumbnail').value;
+            
+            if (!title || !url) {
+                alert('Inserisci titolo e URL');
+                return;
+            }
+            
+            if (!thumbnail) {
+                const videoId = extractYouTubeId(url);
+                if (videoId) thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+            }
+            
+            const newVideo = {
+                id: 'v_' + Date.now(),
+                title, url, description: desc, category,
+                thumbnail: thumbnail || 'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=400',
+                date: new Date().toISOString().split('T')[0],
+                comments: []
+            };
+            
+            saveVideo(newVideo);
+            
+            document.getElementById('newVideoTitle').value = '';
+            document.getElementById('newVideoUrl').value = '';
+            document.getElementById('newVideoDesc').value = '';
+            document.getElementById('newVideoThumbnail').value = '';
+            
+            if (!isFirebaseMode) loadAdminVideoList();
+            showNotification('✅ Video aggiunto!');
+        }
+
+        function loadAdminVideoList() {
+            const videos = getVideos();
+            document.getElementById('adminVideoList').innerHTML = videos.map(v => `
+                <div class="flex flex-col md:flex-row md:items-center justify-between bg-gray-700 rounded-lg p-3 md:p-4 gap-3">
+                    <div class="flex items-center gap-3 md:gap-4">
+                        <img src="${v.thumbnail}" alt="${v.title}" class="w-20 md:w-24 h-14 md:h-16 object-cover rounded">
+                        <div class="flex-1 min-w-0">
+                            <h4 class="font-medium text-sm md:text-base truncate">${v.title}</h4>
+                            <p class="text-xs md:text-sm text-gray-400">${getCategoryLabel(v.category)} • ${v.date}</p>
+                        </div>
+                    </div>
+                    <div class="flex gap-2 justify-end">
+                        <button onclick="openEditModal('${v.id}')" class="bg-blue-600 px-3 md:px-4 py-2 rounded-lg hover:bg-blue-700 transition text-xs md:text-sm">✏️</button>
+                        <button onclick="deleteVideo('${v.id}')" class="bg-red-600 px-3 md:px-4 py-2 rounded-lg hover:bg-red-700 transition text-xs md:text-sm">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function refreshVideos() {
+            loadAdminVideoList();
+            loadVideos();
+            showNotification('🔄 Lista aggiornata!');
+        }
+
+        function openEditModal(id) {
+            const videos = getVideos();
+            const video = videos.find(v => v.id === id);
+            if (!video) return;
+            
+            document.getElementById('editVideoId').value = video.id;
+            document.getElementById('editVideoTitle').value = video.title;
+            document.getElementById('editVideoUrl').value = video.url;
+            document.getElementById('editVideoDesc').value = video.description || '';
+            document.getElementById('editVideoCategory').value = video.category;
+            document.getElementById('editVideoThumbnail').value = video.thumbnail || '';
+            document.getElementById('editVideoDate').value = video.date;
+            
+            document.getElementById('editVideoModal').classList.remove('hidden');
+        }
+
+        function closeEditModal() {
+            document.getElementById('editVideoModal').classList.add('hidden');
+        }
+
+        function saveVideoEdit() {
+            const id = document.getElementById('editVideoId').value;
+            const videos = getVideos();
+            const video = videos.find(v => v.id === id);
+            if (!video) return;
+            
+            let thumbnail = document.getElementById('editVideoThumbnail').value;
+            const url = document.getElementById('editVideoUrl').value;
+            
+            if (!thumbnail) {
+                const videoId = extractYouTubeId(url);
+                if (videoId) thumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+            }
+            
+            video.title = document.getElementById('editVideoTitle').value;
+            video.url = url;
+            video.description = document.getElementById('editVideoDesc').value;
+            video.category = document.getElementById('editVideoCategory').value;
+            video.thumbnail = thumbnail || video.thumbnail;
+            video.date = document.getElementById('editVideoDate').value;
+            
+            saveVideo(video);
+            closeEditModal();
+            
+            if (!isFirebaseMode) loadAdminVideoList();
+            showNotification('✅ Video modificato!');
+        }
+
+        function deleteVideo(id) {
+            if (!confirm('Sei sicuro di voler eliminare questo video?')) return;
+            deleteVideoFromDB(id);
+            if (!isFirebaseMode) loadAdminVideoList();
+            showNotification('🗑️ Video eliminato');
+        }
+
+        function loadMembersList() {
+            const users = getUsers();
+            document.getElementById('membersTableBody').innerHTML = users.map(u => `
+                <tr class="border-b border-gray-700">
+                    <td class="px-3 md:px-4 py-3">${u.nome || '-'} ${u.cognome || ''}</td>
+                    <td class="px-3 md:px-4 py-3">${u.username}</td>
+                    <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.email}</td>
+                    <td class="px-3 md:px-4 py-3 hidden md:table-cell">${u.date}</td>
+                    <td class="px-3 md:px-4 py-3"><span class="px-2 py-1 rounded text-xs ${u.isAdmin ? 'bg-yellow-600' : 'bg-green-600'}">${u.isAdmin ? 'Admin' : 'tv+'}</span></td>
+                </tr>
+            `).join('');
+        }
+
+        // Logo
+        function uploadLogo(event) {
+            const file = event.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(e) {
+                    saveLogo(e.target.result);
+                    showNotification('✅ Logo caricato!');
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        function loadLogo() {
+            if (isFirebaseMode) return; // Firebase handles this via listener
+            const logo = localStorage.getItem('cesticaLogo');
+            applyLogo(logo);
+        }
+
+        // Notifications
+        function showNotification(message) {
+            const notification = document.createElement('div');
+            notification.className = 'fixed bottom-4 right-4 md:bottom-8 md:right-8 bg-green-600 text-white px-4 md:px-6 py-3 md:py-4 rounded-xl shadow-2xl z-50 flex items-center gap-3 text-sm md:text-base';
+            notification.innerHTML = `<span class="font-medium">${message}</span>`;
+            document.body.appendChild(notification);
+            setTimeout(() => notification.remove(), 3000);
+        }
+
+        // Session check
+        function checkSession() {
+            const savedUser = localStorage.getItem('cesticaCurrentUser');
+            if (savedUser) {
+                currentUser = JSON.parse(savedUser);
+                
+                // Verify user still exists
+                const users = getUsers();
+                const userExists = users.find(u => u.username === currentUser.username);
+                
+                if (userExists) {
+                    document.getElementById('authModal').classList.add('hidden');
+                    document.getElementById('mainApp').classList.remove('hidden');
+                    document.getElementById('currentUser').textContent = currentUser.username;
+                    document.getElementById('currentUserMobile').textContent = currentUser.username.substring(0, 2).toUpperCase();
+                    if (currentUser.isAdmin) {
+                        document.getElementById('adminBtn').classList.remove('hidden');
+                        document.getElementById('mobileAdminBtn').classList.remove('hidden');
+                        document.getElementById('dbStatus').textContent = isFirebaseMode ? '🔥 Firebase Connesso' : '💾 Modalità Locale';
+                    }
+                    loadVideos();
+                    loadLogo();
+                } else {
+                    document.getElementById('authModal').classList.remove('hidden');
+                }
+            } else {
+                document.getElementById('authModal').classList.remove('hidden');
+            }
+        }
+
+        // Initialize
+        checkFirebaseConfig();
+    </script>
+</body>
+</html>

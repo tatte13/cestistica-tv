@@ -1,0 +1,38 @@
+{
+  "name": "Cestistica TV",
+  "short_name": "Cestistica TV",
+  "description": "Il club channel ufficiale della Cestistica Savonese - Club Channel Biancoverde",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#111111",
+  "theme_color": "#228B22",
+  "orientation": "portrait-primary",
+  "categories": ["sports", "entertainment"],
+  "lang": "it",
+  "icons": [
+    {
+      "src": "https://i.imgur.com/WbvsajN.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://i.imgur.com/WbvsajN.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Live",
+      "url": "/?section=live",
+      "description": "Guarda le partite in diretta"
+    },
+    {
+      "name": "Highlights",
+      "url": "/?section=highlights", 
+      "description": "Guarda gli highlights"
+    }
+  ]
+}

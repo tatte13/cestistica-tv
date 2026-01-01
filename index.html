@@ -138,6 +138,7 @@
             <button onclick="showPronostici(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎯 Pronostici</button>
             <button onclick="showClassifica(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🏆 Classifica</button>
             <button onclick="showSocialWall(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📸 Social</button>
+            <button onclick="showGames(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎮 Games</button>
             <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">❤️ La Mia Lista</button>
             <hr class="border-gray-700 my-4">
             <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👤 Profilo</button>
@@ -263,6 +264,7 @@
                     <button onclick="showPronostici()" class="hover:text-green-400 transition">Pronostici</button>
                     <button onclick="showClassifica()" class="hover:text-green-400 transition">Classifica</button>
                     <button onclick="showSocialWall()" class="hover:text-green-400 transition">Social</button>
+                    <button onclick="showGames()" class="hover:text-green-400 transition">Games</button>
                     <button onclick="showWatchlist()" class="hover:text-green-400 transition">La Mia Lista</button>
                 </nav>
                 
@@ -615,6 +617,98 @@
             </div>
         </div>
 
+        <!-- Games Page -->
+        <div id="gamesPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">🎮 Games</h2>
+                
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Ruota della Fortuna -->
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-xl font-bold mb-4 text-center">🎰 Ruota della Fortuna</h3>
+                        <p class="text-gray-400 text-center text-sm mb-4">Gira la ruota e vinci Biancoverdi Points! (1 giro gratis al giorno)</p>
+                        
+                        <div class="relative w-64 h-64 mx-auto mb-6">
+                            <canvas id="wheelCanvas" width="256" height="256" class="w-full h-full"></canvas>
+                            <div class="absolute top-0 left-1/2 -translate-x-1/2 -translate-y-2 w-0 h-0 border-l-[15px] border-r-[15px] border-t-[25px] border-l-transparent border-r-transparent border-t-green-500"></div>
+                        </div>
+                        
+                        <button onclick="spinWheel()" id="spinBtn" class="w-full gradient-bg py-3 rounded-lg font-bold text-lg hover:opacity-90 transition">
+                            🎰 GIRA LA RUOTA!
+                        </button>
+                        <p id="wheelResult" class="text-center mt-4 text-lg font-bold hidden"></p>
+                        <p id="wheelCooldown" class="text-center mt-2 text-gray-500 text-sm hidden"></p>
+                    </div>
+                    
+                    <!-- Slot Machine -->
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-xl font-bold mb-4 text-center">🎰 Slot Machine</h3>
+                        <p class="text-gray-400 text-center text-sm mb-4">Fai girare i rulli! 3 simboli uguali = JACKPOT! (1 giro gratis al giorno)</p>
+                        
+                        <div class="flex justify-center gap-4 mb-6">
+                            <div id="slot1" class="w-20 h-24 bg-gray-900 rounded-xl flex items-center justify-center text-5xl border-4 border-yellow-500">🏀</div>
+                            <div id="slot2" class="w-20 h-24 bg-gray-900 rounded-xl flex items-center justify-center text-5xl border-4 border-yellow-500">💚</div>
+                            <div id="slot3" class="w-20 h-24 bg-gray-900 rounded-xl flex items-center justify-center text-5xl border-4 border-yellow-500">⭐</div>
+                        </div>
+                        
+                        <button onclick="playSlotMachine()" id="slotBtn" class="w-full gradient-bg py-3 rounded-lg font-bold text-lg hover:opacity-90 transition">
+                            🎰 GIRA I RULLI!
+                        </button>
+                        <p id="slotResult" class="text-center mt-4 text-lg font-bold hidden"></p>
+                        <p id="slotCooldown" class="text-center mt-2 text-gray-500 text-sm hidden"></p>
+                    </div>
+                    
+                    <!-- Tiro Libero -->
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-xl font-bold mb-4 text-center">🏀 Tiro Libero</h3>
+                        <p class="text-gray-400 text-center text-sm mb-4">Clicca al momento giusto per fare canestro! (3 tiri gratis al giorno)</p>
+                        
+                        <div class="relative h-32 bg-gradient-to-b from-orange-900 to-orange-700 rounded-xl mb-4 overflow-hidden">
+                            <div class="absolute top-4 left-1/2 -translate-x-1/2 w-20 h-12 border-4 border-white rounded-b-full"></div>
+                            <div id="powerBar" class="absolute bottom-0 left-0 right-0 h-8 bg-gray-900">
+                                <div id="powerIndicator" class="absolute top-0 bottom-0 w-2 bg-green-500 left-0"></div>
+                                <div class="absolute top-0 bottom-0 left-1/2 w-1 bg-yellow-400 -translate-x-1/2"></div>
+                            </div>
+                            <div id="shootResult" class="absolute inset-0 flex items-center justify-center text-4xl font-bold hidden"></div>
+                        </div>
+                        
+                        <div class="flex items-center justify-between mb-4">
+                            <span class="text-gray-400">Tiri rimasti oggi:</span>
+                            <span id="shotsLeft" class="text-green-400 font-bold">3</span>
+                        </div>
+                        
+                        <button onclick="shootBasket()" id="shootBtn" class="w-full gradient-bg py-3 rounded-lg font-bold text-lg hover:opacity-90 transition">
+                            🏀 TIRA!
+                        </button>
+                    </div>
+                    
+                    <!-- Gratta e Vinci -->
+                    <div class="bg-gray-800 rounded-xl p-6">
+                        <h3 class="text-xl font-bold mb-4 text-center">🎫 Gratta e Vinci</h3>
+                        <p class="text-gray-400 text-center text-sm mb-4">Gratta le caselle! 3 simboli uguali = PREMIO! (1 carta gratis al giorno)</p>
+                        
+                        <div id="scratchCard" class="grid grid-cols-3 gap-2 mb-4">
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(0)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(1)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(2)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(3)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(4)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(5)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(6)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(7)">❓</div>
+                            <div class="scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition" onclick="scratchCell(8)">❓</div>
+                        </div>
+                        
+                        <p id="scratchResult" class="text-center text-lg font-bold hidden"></p>
+                        <button onclick="newScratchCard()" id="newCardBtn" class="w-full bg-gray-700 py-3 rounded-lg font-bold hover:bg-gray-600 transition mt-2">
+                            🎫 Nuova Carta
+                        </button>
+                        <p id="scratchCooldown" class="text-center mt-2 text-gray-500 text-sm hidden"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
         <!-- Admin Page -->
         <div id="adminPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
@@ -646,9 +740,11 @@
                     <button onclick="showAdminTab('news')" class="tab-btn" id="tabNews">📰 News</button>
                     <button onclick="showAdminTab('calendar')" class="tab-btn" id="tabCalendar">📅 Calendario</button>
                     <button onclick="showAdminTab('pronostici')" class="tab-btn" id="tabPronostici">🎯 Pronostici</button>
+                    <button onclick="showAdminTab('points')" class="tab-btn" id="tabPoints">💰 Punti</button>
                     <button onclick="showAdminTab('users')" class="tab-btn" id="tabUsers">👥 Utenti</button>
                     <button onclick="showAdminTab('logo')" class="tab-btn" id="tabLogo">🖼️ Logo</button>
                     <button onclick="showAdminTab('sponsor')" class="tab-btn" id="tabSponsor">🤝 Sponsor</button>
+                    <button onclick="showAdminTab('mascot')" class="tab-btn" id="tabMascot">🦎 Mascotte</button>
                 </div>
 
                 <!-- Video Tab -->
@@ -837,6 +933,42 @@
                         <p id="noAdminSponsors" class="text-gray-500 text-center py-4">Nessun partner aggiunto</p>
                     </div>
                 </div>
+
+                <!-- Points Tab -->
+                <div id="adminPointsTab" class="hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">💰 Modifica Punti Utenti</h3>
+                        <p class="text-gray-400 text-sm mb-4">Aggiungi o togli punti agli utenti. Usa numeri positivi per aggiungere (+50) o negativi per togliere (-30).</p>
+                        <div id="pointsUserList" class="space-y-3 max-h-96 overflow-y-auto"></div>
+                    </div>
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">📊 Storico Movimenti</h3>
+                        <div id="pointsHistory" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                        <p id="noPointsHistory" class="text-gray-500 text-center py-4">Nessun movimento registrato</p>
+                    </div>
+                </div>
+
+                <!-- Mascot Tab -->
+                <div id="adminMascotTab" class="hidden">
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">🦎 Mascotte Lizzy</h3>
+                        <p class="text-gray-400 text-sm mb-4">Carica l'immagine della mascotte Lizzy la Lucertola per il gioco Lizzy Runner</p>
+                        <div class="flex flex-col items-center gap-4">
+                            <div class="w-32 h-32 bg-gray-700 rounded-xl flex items-center justify-center overflow-hidden">
+                                <img id="mascotPreview" src="" class="w-full h-full object-contain hidden">
+                                <span id="noMascotText" class="text-6xl">🦎</span>
+                            </div>
+                            <div class="flex gap-3">
+                                <label class="gradient-bg px-4 py-2 rounded-lg cursor-pointer hover:opacity-90">
+                                    📤 Carica Mascotte
+                                    <input type="file" accept="image/*" onchange="uploadMascot(event)" class="hidden">
+                                </label>
+                                <button onclick="removeMascot()" class="bg-red-600 px-4 py-2 rounded-lg hover:bg-red-700">🗑️ Rimuovi</button>
+                            </div>
+                            <p class="text-xs text-gray-500">Consiglio: usa un'immagine PNG con sfondo trasparente</p>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
 
@@ -943,6 +1075,20 @@
                 db.ref('settings/calendar').on('value', (snapshot) => {
                     if (snapshot.val()) {
                         document.getElementById('currentCalendarInfo').classList.remove('hidden');
+                    }
+                });
+
+                db.ref('settings/mascot').on('value', (snapshot) => {
+                    const mascot = snapshot.val();
+                    const preview = document.getElementById('mascotPreview');
+                    const noText = document.getElementById('noMascotText');
+                    if (mascot && preview) {
+                        preview.src = mascot;
+                        preview.classList.remove('hidden');
+                        noText?.classList.add('hidden');
+                    } else if (preview) {
+                        preview.classList.add('hidden');
+                        noText?.classList.remove('hidden');
                     }
                 });
 
@@ -2047,7 +2193,7 @@
         }
 
         function hideAllPages() {
-            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage', 'socialWallPage'].forEach(id => {
+            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage', 'socialWallPage', 'gamesPage'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
@@ -2088,12 +2234,18 @@
         }
 
         function showAdminTab(tab) {
-            ['video', 'news', 'calendar', 'pronostici', 'users', 'logo', 'sponsor'].forEach(t => {
+            ['video', 'news', 'calendar', 'pronostici', 'points', 'users', 'logo', 'sponsor', 'mascot'].forEach(t => {
                 document.getElementById('admin' + t.charAt(0).toUpperCase() + t.slice(1) + 'Tab').classList.add('hidden');
                 document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
             });
             document.getElementById('admin' + tab.charAt(0).toUpperCase() + tab.slice(1) + 'Tab').classList.remove('hidden');
             document.getElementById('tab' + tab.charAt(0).toUpperCase() + tab.slice(1)).classList.add('active');
+            
+            // Carica lista punti se tab punti
+            if (tab === 'points') {
+                loadPointsUserList();
+                loadPointsHistory();
+            }
         }
 
         function updateAdminStats() {
@@ -2762,6 +2914,487 @@
                 reader.readAsDataURL(file);
             }
         });
+
+        // Games - Wheel of Fortune
+        const wheelPrizes = [5, 10, 15, 20, 25, 50, 75, 100];
+        const wheelColors = ['#22c55e', '#16a34a', '#15803d', '#166534', '#14532d', '#22c55e', '#16a34a', '#15803d'];
+        let isSpinning = false;
+        
+        function drawWheel() {
+            const canvas = document.getElementById('wheelCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const centerX = canvas.width / 2;
+            const centerY = canvas.height / 2;
+            const radius = 120;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const sliceAngle = (2 * Math.PI) / wheelPrizes.length;
+            
+            wheelPrizes.forEach((prize, i) => {
+                const startAngle = i * sliceAngle;
+                const endAngle = (i + 1) * sliceAngle;
+                
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.arc(centerX, centerY, radius, startAngle, endAngle);
+                ctx.closePath();
+                ctx.fillStyle = wheelColors[i];
+                ctx.fill();
+                ctx.strokeStyle = '#fff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Text
+                ctx.save();
+                ctx.translate(centerX, centerY);
+                ctx.rotate(startAngle + sliceAngle / 2);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 16px Poppins';
+                ctx.fillText('+' + prize, radius - 10, 5);
+                ctx.restore();
+            });
+            
+            // Center circle
+            ctx.beginPath();
+            ctx.arc(centerX, centerY, 25, 0, 2 * Math.PI);
+            ctx.fillStyle = '#1a1a1a';
+            ctx.fill();
+            ctx.strokeStyle = '#fff';
+            ctx.stroke();
+        }
+        
+        function canSpinToday() {
+            const lastSpin = localStorage.getItem('lastWheelSpin_' + currentUser?.username);
+            if (!lastSpin) return true;
+            const today = new Date().toDateString();
+            return lastSpin !== today;
+        }
+        
+        function spinWheel() {
+            if (!currentUser) return;
+            if (isSpinning) return;
+            if (!canSpinToday()) {
+                document.getElementById('wheelCooldown').textContent = '⏰ Hai già girato oggi! Torna domani.';
+                document.getElementById('wheelCooldown').classList.remove('hidden');
+                return;
+            }
+            
+            isSpinning = true;
+            document.getElementById('spinBtn').disabled = true;
+            document.getElementById('spinBtn').textContent = '🎰 Girando...';
+            document.getElementById('wheelResult').classList.add('hidden');
+            
+            const canvas = document.getElementById('wheelCanvas');
+            let rotation = 0;
+            const spins = 5 + Math.random() * 3;
+            const totalRotation = spins * 360 + Math.random() * 360;
+            const duration = 4000;
+            const startTime = Date.now();
+            
+            function animate() {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const easeOut = 1 - Math.pow(1 - progress, 3);
+                rotation = totalRotation * easeOut;
+                
+                canvas.style.transform = `rotate(${rotation}deg)`;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    // Calculate prize
+                    const normalizedRotation = rotation % 360;
+                    const sliceAngle = 360 / wheelPrizes.length;
+                    const prizeIndex = Math.floor((360 - normalizedRotation + sliceAngle / 2) / sliceAngle) % wheelPrizes.length;
+                    const prize = wheelPrizes[prizeIndex];
+                    
+                    // Award points
+                    addPoints(prize);
+                    
+                    // Save spin date
+                    localStorage.setItem('lastWheelSpin_' + currentUser.username, new Date().toDateString());
+                    
+                    // Show result
+                    document.getElementById('wheelResult').innerHTML = `🎉 Hai vinto <span class="text-green-400">+${prize} Biancoverdi Points</span>!`;
+                    document.getElementById('wheelResult').classList.remove('hidden');
+                    
+                    isSpinning = false;
+                    document.getElementById('spinBtn').disabled = false;
+                    document.getElementById('spinBtn').textContent = '🎰 GIRA LA RUOTA!';
+                    
+                    // Show cooldown
+                    document.getElementById('wheelCooldown').textContent = '⏰ Torna domani per un altro giro!';
+                    document.getElementById('wheelCooldown').classList.remove('hidden');
+                }
+            }
+            
+            animate();
+        }
+        
+        // Slot Machine Game
+        const slotSymbols = ['🏀', '💚', '⭐', '🏆', '🎯', '🔥'];
+        let slotSpinning = false;
+        
+        function canPlaySlotToday() {
+            const lastPlay = localStorage.getItem('lastSlotPlay_' + currentUser?.username);
+            if (!lastPlay) return true;
+            return lastPlay !== new Date().toDateString();
+        }
+        
+        function playSlotMachine() {
+            if (!currentUser || slotSpinning) return;
+            if (!canPlaySlotToday()) {
+                document.getElementById('slotCooldown').textContent = '⏰ Hai già giocato oggi! Torna domani.';
+                document.getElementById('slotCooldown').classList.remove('hidden');
+                return;
+            }
+            
+            slotSpinning = true;
+            document.getElementById('slotBtn').disabled = true;
+            document.getElementById('slotResult').classList.add('hidden');
+            
+            const slots = [document.getElementById('slot1'), document.getElementById('slot2'), document.getElementById('slot3')];
+            const results = [];
+            let spinCount = 0;
+            
+            slots.forEach((slot, index) => {
+                let spins = 0;
+                const maxSpins = 15 + index * 5;
+                const interval = setInterval(() => {
+                    slot.textContent = slotSymbols[Math.floor(Math.random() * slotSymbols.length)];
+                    spins++;
+                    if (spins >= maxSpins) {
+                        clearInterval(interval);
+                        results[index] = slot.textContent;
+                        spinCount++;
+                        if (spinCount === 3) finishSlotSpin(results);
+                    }
+                }, 100);
+            });
+        }
+        
+        function finishSlotSpin(results) {
+            slotSpinning = false;
+            document.getElementById('slotBtn').disabled = false;
+            localStorage.setItem('lastSlotPlay_' + currentUser.username, new Date().toDateString());
+            
+            let prize = 0;
+            let message = '';
+            
+            if (results[0] === results[1] && results[1] === results[2]) {
+                prize = 100;
+                message = '🎉 JACKPOT! 3 uguali = +100 punti!';
+            } else if (results[0] === results[1] || results[1] === results[2] || results[0] === results[2]) {
+                prize = 25;
+                message = '👍 2 uguali = +25 punti!';
+            } else {
+                prize = 5;
+                message = '😊 Consolazione: +5 punti';
+            }
+            
+            addPoints(prize);
+            document.getElementById('slotResult').innerHTML = `<span class="text-green-400">${message}</span>`;
+            document.getElementById('slotResult').classList.remove('hidden');
+            document.getElementById('slotCooldown').textContent = '⏰ Torna domani per un altro giro!';
+            document.getElementById('slotCooldown').classList.remove('hidden');
+        }
+        
+        // Tiro Libero Game
+        let powerBarInterval = null;
+        let powerPosition = 0;
+        let powerDirection = 1;
+        let isShooting = false;
+        
+        function getShotsLeft() {
+            const data = localStorage.getItem('shotsData_' + currentUser?.username);
+            if (!data) return 3;
+            const parsed = JSON.parse(data);
+            if (parsed.date !== new Date().toDateString()) return 3;
+            return parsed.shots;
+        }
+        
+        function setShotsLeft(shots) {
+            localStorage.setItem('shotsData_' + currentUser?.username, JSON.stringify({
+                date: new Date().toDateString(),
+                shots: shots
+            }));
+        }
+        
+        function startPowerBar() {
+            if (powerBarInterval) return;
+            const indicator = document.getElementById('powerIndicator');
+            const bar = document.getElementById('powerBar');
+            powerBarInterval = setInterval(() => {
+                powerPosition += powerDirection * 3;
+                if (powerPosition >= bar.offsetWidth - 8) powerDirection = -1;
+                if (powerPosition <= 0) powerDirection = 1;
+                indicator.style.left = powerPosition + 'px';
+            }, 20);
+        }
+        
+        function shootBasket() {
+            if (!currentUser || isShooting) return;
+            const shotsLeft = getShotsLeft();
+            if (shotsLeft <= 0) {
+                alert('Hai finito i tiri! Torna domani.');
+                return;
+            }
+            
+            if (!powerBarInterval) {
+                startPowerBar();
+                document.getElementById('shootBtn').textContent = '🏀 TIRA ORA!';
+                return;
+            }
+            
+            isShooting = true;
+            clearInterval(powerBarInterval);
+            powerBarInterval = null;
+            
+            const bar = document.getElementById('powerBar');
+            const center = bar.offsetWidth / 2;
+            const distance = Math.abs(powerPosition - center);
+            const accuracy = 100 - (distance / center * 100);
+            
+            let prize = 0;
+            let result = '';
+            
+            if (accuracy >= 90) { prize = 50; result = '🏀 CANESTRO PERFETTO! +50'; }
+            else if (accuracy >= 70) { prize = 25; result = '👍 Buon tiro! +25'; }
+            else if (accuracy >= 50) { prize = 10; result = '😊 Quasi! +10'; }
+            else { prize = 0; result = '❌ Sbagliato!'; }
+            
+            setShotsLeft(shotsLeft - 1);
+            document.getElementById('shotsLeft').textContent = shotsLeft - 1;
+            
+            if (prize > 0) addPoints(prize);
+            
+            const resultEl = document.getElementById('shootResult');
+            resultEl.innerHTML = `<span class="${prize > 0 ? 'text-green-400' : 'text-red-400'}">${result}</span>`;
+            resultEl.classList.remove('hidden');
+            
+            setTimeout(() => {
+                resultEl.classList.add('hidden');
+                document.getElementById('shootBtn').textContent = '🏀 TIRA!';
+                document.getElementById('powerIndicator').style.left = '0px';
+                powerPosition = 0;
+                isShooting = false;
+            }, 2000);
+        }
+        
+        // Gratta e Vinci
+        const scratchSymbols = ['💎', '🏆', '🏀', '⭐', '💚'];
+        const scratchPrizes = { '💎': 200, '🏆': 100, '🏀': 50, '⭐': 25, '💚': 10 };
+        let scratchCardData = [];
+        let scratchedCells = [];
+        
+        function canScratchToday() {
+            const lastScratch = localStorage.getItem('lastScratch_' + currentUser?.username);
+            if (!lastScratch) return true;
+            return lastScratch !== new Date().toDateString();
+        }
+        
+        function generateScratchCard() {
+            scratchCardData = [];
+            scratchedCells = [];
+            for (let i = 0; i < 9; i++) {
+                scratchCardData.push(scratchSymbols[Math.floor(Math.random() * scratchSymbols.length)]);
+            }
+            const cells = document.querySelectorAll('.scratch-cell');
+            cells.forEach((cell, i) => {
+                cell.textContent = '❓';
+                cell.className = 'scratch-cell w-full aspect-square bg-gradient-to-br from-yellow-500 to-yellow-600 rounded-lg flex items-center justify-center text-3xl cursor-pointer hover:scale-105 transition';
+            });
+            document.getElementById('scratchResult').classList.add('hidden');
+        }
+        
+        function scratchCell(index) {
+            if (!currentUser) return;
+            if (!canScratchToday()) {
+                document.getElementById('scratchCooldown').textContent = '⏰ Hai già grattato oggi! Torna domani.';
+                document.getElementById('scratchCooldown').classList.remove('hidden');
+                return;
+            }
+            if (scratchedCells.includes(index)) return;
+            if (scratchCardData.length === 0) generateScratchCard();
+            
+            scratchedCells.push(index);
+            const cells = document.querySelectorAll('.scratch-cell');
+            cells[index].textContent = scratchCardData[index];
+            cells[index].className = 'scratch-cell w-full aspect-square bg-gray-700 rounded-lg flex items-center justify-center text-3xl';
+            
+            if (scratchedCells.length === 9) checkScratchWin();
+        }
+        
+        function checkScratchWin() {
+            localStorage.setItem('lastScratch_' + currentUser.username, new Date().toDateString());
+            
+            const counts = {};
+            scratchCardData.forEach(s => counts[s] = (counts[s] || 0) + 1);
+            
+            let prize = 0;
+            let winSymbol = '';
+            for (const [symbol, count] of Object.entries(counts)) {
+                if (count >= 3) { prize = scratchPrizes[symbol]; winSymbol = symbol; break; }
+            }
+            
+            const resultEl = document.getElementById('scratchResult');
+            if (prize > 0) {
+                addPoints(prize);
+                resultEl.innerHTML = `<span class="text-green-400">🎉 3x ${winSymbol} = +${prize} punti!</span>`;
+            } else {
+                resultEl.innerHTML = '<span class="text-gray-400">😔 Nessuna vincita questa volta</span>';
+            }
+            resultEl.classList.remove('hidden');
+            document.getElementById('scratchCooldown').textContent = '⏰ Torna domani per una nuova carta!';
+            document.getElementById('scratchCooldown').classList.remove('hidden');
+        }
+        
+        function newScratchCard() {
+            if (!canScratchToday()) {
+                document.getElementById('scratchCooldown').textContent = '⏰ Hai già grattato oggi! Torna domani.';
+                document.getElementById('scratchCooldown').classList.remove('hidden');
+                return;
+            }
+            generateScratchCard();
+        }
+        
+        // Show Games page
+        function showGames() {
+            hideAllPages();
+            document.getElementById('gamesPage').classList.remove('hidden');
+            drawWheel();
+            generateScratchCard();
+            
+            // Check cooldowns
+            if (!canSpinToday()) {
+                document.getElementById('wheelCooldown').textContent = '⏰ Hai già girato oggi! Torna domani.';
+                document.getElementById('wheelCooldown').classList.remove('hidden');
+            }
+            if (!canPlaySlotToday()) {
+                document.getElementById('slotCooldown').textContent = '⏰ Hai già giocato oggi! Torna domani.';
+                document.getElementById('slotCooldown').classList.remove('hidden');
+            }
+            if (!canScratchToday()) {
+                document.getElementById('scratchCooldown').textContent = '⏰ Hai già grattato oggi! Torna domani.';
+                document.getElementById('scratchCooldown').classList.remove('hidden');
+            }
+            document.getElementById('shotsLeft').textContent = getShotsLeft();
+        }
+        
+        // Mascot admin functions
+        function uploadMascot(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            if (file.size > 500000) return alert('Immagine troppo grande (max 500KB)');
+            
+            const reader = new FileReader();
+            reader.onload = e => {
+                db.ref('settings/mascot').set(e.target.result);
+                document.getElementById('mascotPreview').src = e.target.result;
+                document.getElementById('mascotPreview').classList.remove('hidden');
+                document.getElementById('noMascotText').classList.add('hidden');
+            };
+            reader.readAsDataURL(file);
+        }
+        
+        function removeMascot() {
+            db.ref('settings/mascot').remove();
+            document.getElementById('mascotPreview').classList.add('hidden');
+            document.getElementById('noMascotText').classList.remove('hidden');
+        }
+
+        // Points Management
+        function loadPointsUserList() {
+            const container = document.getElementById('pointsUserList');
+            if (!container) return;
+            
+            const members = usersCache.filter(u => !u.isAdmin);
+            if (members.length === 0) {
+                container.innerHTML = '<p class="text-gray-500">Nessun utente</p>';
+                return;
+            }
+            
+            container.innerHTML = members.map(u => `
+                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="w-10 h-10 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
+                        ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold">${u.username.charAt(0).toUpperCase()}</span>`}
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="font-medium">${u.nome} ${u.cognome}</p>
+                        <p class="text-sm text-gray-400">@${u.username} • ${getBadge(u.points || 0)}</p>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span class="text-green-400 font-bold">${u.points || 0} 💚</span>
+                        <input type="number" id="pointsInput_${u.id}" placeholder="+/-" class="w-20 bg-gray-600 px-2 py-1 rounded text-sm border border-gray-500 text-center">
+                        <button onclick="applyPoints('${u.id}')" class="bg-green-600 px-3 py-1 rounded hover:bg-green-700 text-sm">Applica</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+        
+        function applyPoints(userId) {
+            const input = document.getElementById('pointsInput_' + userId);
+            const pointsChange = parseInt(input.value);
+            
+            if (isNaN(pointsChange) || pointsChange === 0) {
+                alert('Inserisci un valore valido');
+                return;
+            }
+            
+            const user = usersCache.find(u => u.id === userId);
+            if (!user) return;
+            
+            const newPoints = Math.max(0, (user.points || 0) + pointsChange);
+            
+            // Aggiorna punti utente
+            db.ref('users/' + userId).update({ points: newPoints });
+            
+            // Salva movimento nello storico
+            db.ref('pointsHistory').push({
+                userId: userId,
+                username: user.username,
+                change: pointsChange,
+                newTotal: newPoints,
+                adminUsername: currentUser.username,
+                date: new Date().toLocaleDateString('it-IT'),
+                time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+            });
+            
+            input.value = '';
+            alert(`${pointsChange > 0 ? '+' : ''}${pointsChange} punti applicati a ${user.username}. Nuovo totale: ${newPoints}`);
+        }
+        
+        function loadPointsHistory() {
+            const container = document.getElementById('pointsHistory');
+            const noHistory = document.getElementById('noPointsHistory');
+            
+            if (!container) return;
+            
+            db.ref('pointsHistory').orderByChild('date').limitToLast(50).once('value', (snapshot) => {
+                const movements = [];
+                snapshot.forEach(child => movements.push({ id: child.key, ...child.val() }));
+                movements.reverse();
+                
+                if (movements.length === 0) {
+                    container.innerHTML = '';
+                    noHistory?.classList.remove('hidden');
+                } else {
+                    noHistory?.classList.add('hidden');
+                    container.innerHTML = movements.map(m => `
+                        <div class="flex items-center gap-3 bg-gray-700/50 rounded-lg p-2 text-sm">
+                            <span class="text-gray-400">${m.date} ${m.time}</span>
+                            <span class="font-medium">${m.username}</span>
+                            <span class="${m.change > 0 ? 'text-green-400' : 'text-red-400'} font-bold">${m.change > 0 ? '+' : ''}${m.change}</span>
+                            <span class="text-gray-500">→ ${m.newTotal}</span>
+                            <span class="text-gray-500 ml-auto">da ${m.adminUsername}</span>
+                        </div>
+                    `).join('');
+                }
+            });
+        }
 
         // Initialize
         initFirebase();

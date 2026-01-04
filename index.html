@@ -67,7 +67,13 @@
             background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
         }
         .qr-code { image-rendering: pixelated; }
-    </style>
+    .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+</style>
 </head>
 <body class="bg-gray-900 text-white min-h-screen">
     
@@ -139,6 +145,7 @@
             <button onclick="showClassifica(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🏆 Classifica</button>
             <button onclick="showSocialWall(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📸 Social</button>
             <button onclick="showGames(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎮 Games</button>
+            <button onclick="showRoster(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👥 Roster</button>
             <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">❤️ La Mia Lista</button>
             <hr class="border-gray-700 my-4">
             <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👤 Profilo</button>
@@ -265,6 +272,7 @@
                     <button onclick="showClassifica()" class="hover:text-green-400 transition">Classifica</button>
                     <button onclick="showSocialWall()" class="hover:text-green-400 transition">Social</button>
                     <button onclick="showGames()" class="hover:text-green-400 transition">Games</button>
+                    <button onclick="showRoster()" class="hover:text-green-400 transition">Roster</button>
                     <button onclick="showWatchlist()" class="hover:text-green-400 transition">La Mia Lista</button>
                 </nav>
                 
@@ -617,6 +625,52 @@
             </div>
         </div>
 
+        <!-- Roster Page -->
+        <div id="rosterPage" class="hidden pt-20 pb-20">
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl md:text-3xl font-bold mb-6">👥 Roster Squadre</h2>
+                
+                <!-- Filtri -->
+                <div class="flex flex-col md:flex-row gap-4 mb-8">
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-400 mb-2">Settore</label>
+                        <select id="rosterSettore" onchange="updateCampionatiDropdown(); loadRoster();" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <option value="maschile">🏀 Settore Maschile</option>
+                            <option value="femminile">🏀 Settore Femminile</option>
+                        </select>
+                    </div>
+                    <div class="flex-1">
+                        <label class="block text-sm text-gray-400 mb-2">Campionato</label>
+                        <select id="rosterCampionato" onchange="loadRoster();" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                        </select>
+                    </div>
+                </div>
+                
+                <!-- Tabella Roster -->
+                <div class="bg-gray-800 rounded-xl overflow-hidden">
+                    <div class="overflow-x-auto">
+                        <table class="w-full">
+                            <thead class="bg-green-600/30">
+                                <tr>
+                                    <th class="px-4 py-3 text-left">Foto</th>
+                                    <th class="px-4 py-3 text-left">Nome</th>
+                                    <th class="px-4 py-3 text-center">N°</th>
+                                    <th class="px-4 py-3 text-left">Ruolo</th>
+                                    <th class="px-4 py-3 text-center">Naz.</th>
+                                    <th class="px-4 py-3 text-center">Anno</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rosterTableBody">
+                                <tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Seleziona un campionato per vedere il roster</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                
+                <p id="emptyRoster" class="text-gray-400 text-center py-10 hidden">Nessun giocatore nel roster</p>
+            </div>
+        </div>
+
         <!-- Games Page -->
         <div id="gamesPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
@@ -745,6 +799,7 @@
                     <button onclick="showAdminTab('logo')" class="tab-btn" id="tabLogo">🖼️ Logo</button>
                     <button onclick="showAdminTab('sponsor')" class="tab-btn" id="tabSponsor">🤝 Sponsor</button>
                     <button onclick="showAdminTab('mascot')" class="tab-btn" id="tabMascot">🦎 Mascotte</button>
+                    <button onclick="showAdminTab('roster')" class="tab-btn" id="tabRoster">👥 Roster</button>
                 </div>
 
                 <!-- Video Tab -->
@@ -967,6 +1022,173 @@
                             </div>
                             <p class="text-xs text-gray-500">Consiglio: usa un'immagine PNG con sfondo trasparente</p>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Roster Tab -->
+                <div id="adminRosterTab" class="hidden">
+                    <!-- Gestione Campionati -->
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">🏆 Gestione Campionati</h3>
+                        
+                        <div class="grid md:grid-cols-2 gap-6">
+                            <!-- Campionati Maschili -->
+                            <div>
+                                <h4 class="font-semibold mb-3 text-blue-400">🏀 Settore Maschile</h4>
+                                <div id="campionatiMaschili" class="space-y-2 mb-3"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="newCampMaschile" placeholder="Nuovo campionato..." class="flex-1 bg-gray-700 px-3 py-2 rounded-lg text-sm border border-gray-600">
+                                    <button onclick="addCampionato('maschile')" class="bg-blue-600 px-4 py-2 rounded-lg hover:bg-blue-700 text-sm">+ Aggiungi</button>
+                                </div>
+                            </div>
+                            
+                            <!-- Campionati Femminili -->
+                            <div>
+                                <h4 class="font-semibold mb-3 text-pink-400">🏀 Settore Femminile</h4>
+                                <div id="campionatiFemminili" class="space-y-2 mb-3"></div>
+                                <div class="flex gap-2">
+                                    <input type="text" id="newCampFemminile" placeholder="Nuovo campionato..." class="flex-1 bg-gray-700 px-3 py-2 rounded-lg text-sm border border-gray-600">
+                                    <button onclick="addCampionato('femminile')" class="bg-pink-600 px-4 py-2 rounded-lg hover:bg-pink-700 text-sm">+ Aggiungi</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Aggiungi Giocatore -->
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4" id="giocatoreFormTitle">➕ Aggiungi Giocatore</h3>
+                        <input type="hidden" id="editGiocatoreId">
+                        
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Settore</label>
+                                <select id="giocatoreSettore" onchange="updateCampionatiGiocatore()" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                                    <option value="maschile">Maschile</option>
+                                    <option value="femminile">Femminile</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Campionato</label>
+                                <select id="giocatoreCampionato" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Nome</label>
+                                <input type="text" id="giocatoreNome" placeholder="Mario" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Cognome</label>
+                                <input type="text" id="giocatoreCognome" placeholder="Rossi" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Numero Maglia</label>
+                                <input type="number" id="giocatoreNumero" placeholder="23" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                        </div>
+                        
+                        <div class="grid md:grid-cols-3 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Ruolo</label>
+                                <select id="giocatoreRuolo" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                                    <option value="Playmaker">Playmaker (PG)</option>
+                                    <option value="Guardia">Guardia (SG)</option>
+                                    <option value="Ala Piccola">Ala Piccola (SF)</option>
+                                    <option value="Ala Grande">Ala Grande (PF)</option>
+                                    <option value="Centro">Centro (C)</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Nazionalità</label>
+                                <select id="giocatoreNazione" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                                    <option value="🇮🇹">🇮🇹 Italia</option>
+                                    <option value="🇺🇸">🇺🇸 USA</option>
+                                    <option value="🇪🇸">🇪🇸 Spagna</option>
+                                    <option value="🇫🇷">🇫🇷 Francia</option>
+                                    <option value="🇩🇪">🇩🇪 Germania</option>
+                                    <option value="🇬🇧">🇬🇧 Regno Unito</option>
+                                    <option value="🇭🇷">🇭🇷 Croazia</option>
+                                    <option value="🇷🇸">🇷🇸 Serbia</option>
+                                    <option value="🇸🇮">🇸🇮 Slovenia</option>
+                                    <option value="🇬🇷">🇬🇷 Grecia</option>
+                                    <option value="🇹🇷">🇹🇷 Turchia</option>
+                                    <option value="🇱🇹">🇱🇹 Lituania</option>
+                                    <option value="🇦🇷">🇦🇷 Argentina</option>
+                                    <option value="🇧🇷">🇧🇷 Brasile</option>
+                                    <option value="🇳🇬">🇳🇬 Nigeria</option>
+                                    <option value="🇸🇳">🇸🇳 Senegal</option>
+                                    <option value="🇨🇲">🇨🇲 Camerun</option>
+                                    <option value="🇦🇱">🇦🇱 Albania</option>
+                                    <option value="🇷🇴">🇷🇴 Romania</option>
+                                    <option value="🇺🇦">🇺🇦 Ucraina</option>
+                                    <option value="🇵🇱">🇵🇱 Polonia</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Anno di Nascita</label>
+                                <input type="number" id="giocatoreAnno" placeholder="2005" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm text-gray-400 mb-2">📷 Foto Giocatore</label>
+                            <input type="file" id="giocatoreFotoInput" accept="image/*" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600">
+                            <div id="giocatoreFotoPreview" class="mt-2 hidden">
+                                <img id="giocatorePreviewImg" src="" class="w-20 h-20 object-cover rounded-full">
+                            </div>
+                        </div>
+                        
+                        <div class="flex gap-3">
+                            <button onclick="saveGiocatore()" id="giocatoreSubmitBtn" class="gradient-bg px-6 py-3 rounded-lg font-semibold">Aggiungi Giocatore</button>
+                            <button onclick="cancelGiocatoreEdit()" id="giocatoreCancelBtn" class="bg-gray-600 px-6 py-3 rounded-lg font-semibold hidden">Annulla</button>
+                        </div>
+                    </div>
+                    
+                    <!-- Duplica Roster -->
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6 mb-6">
+                        <h3 class="text-lg font-bold mb-4">📋 Duplica Roster</h3>
+                        <p class="text-gray-400 text-sm mb-4">Copia tutti i giocatori da un campionato a un altro (utile quando i roster sono simili)</p>
+                        
+                        <div class="grid md:grid-cols-2 gap-4 mb-4">
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">Da (Origine)</label>
+                                <select id="duplicaSettoreOrigine" onchange="updateDuplicaCampionati('origine')" class="w-full bg-gray-700 px-4 py-2 rounded-lg border border-gray-600">
+                                    <option value="maschile">Maschile</option>
+                                    <option value="femminile">Femminile</option>
+                                </select>
+                                <select id="duplicaCampionatoOrigine" class="w-full bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 mt-2">
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm text-gray-400 mb-1">A (Destinazione)</label>
+                                <select id="duplicaSettoreDestinazione" onchange="updateDuplicaCampionati('destinazione')" class="w-full bg-gray-700 px-4 py-2 rounded-lg border border-gray-600">
+                                    <option value="maschile">Maschile</option>
+                                    <option value="femminile">Femminile</option>
+                                </select>
+                                <select id="duplicaCampionatoDestinazione" class="w-full bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 mt-2">
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="duplicaRoster()" class="gradient-bg px-6 py-3 rounded-lg font-semibold">📋 Duplica Roster</button>
+                    </div>
+                    
+                    <!-- Lista Giocatori -->
+                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+                        <h3 class="text-lg font-bold mb-4">👥 Giocatori per Squadra</h3>
+                        
+                        <div class="flex gap-4 mb-4">
+                            <select id="adminRosterSettore" onchange="updateAdminCampionati(); loadAdminRoster();" class="bg-gray-700 px-4 py-2 rounded-lg border border-gray-600">
+                                <option value="maschile">Maschile</option>
+                                <option value="femminile">Femminile</option>
+                            </select>
+                            <select id="adminRosterCampionato" onchange="loadAdminRoster()" class="bg-gray-700 px-4 py-2 rounded-lg border border-gray-600">
+                            </select>
+                        </div>
+                        
+                        <div id="adminRosterList" class="space-y-2"></div>
+                        <p id="noAdminRoster" class="text-gray-500 text-center py-4">Seleziona un campionato per vedere i giocatori</p>
                     </div>
                 </div>
             </div>
@@ -1531,7 +1753,11 @@
         function loadVideos() {
             ['live', 'replays', 'highlights', 'altro'].forEach(category => {
                 const container = document.getElementById(category + 'Videos');
-                const videos = videosCache.filter(v => v.category === category);
+                const videos = videosCache.filter(v => v.category === category); if (category === 'live') {
+    videos.sort((a, b) => (extractDateTimeFromDescription(a.description) || '').localeCompare(extractDateTimeFromDescription(b.description) || ''));
+} else {
+    videos.reverse();
+}
                 container.innerHTML = videos.length === 0 ? '<p class="text-gray-500 py-4">Nessun video</p>' : videos.map(v => createVideoCard(v)).join('');
             });
             if (currentUser?.isAdmin) loadAdminVideoList();
@@ -1545,12 +1771,44 @@
             const likes = video.likes || 0;
             
             let badge = '';
-            if (video.category === 'live') {
-                const dateTime = extractDateTimeFromDescription(video.description);
-                badge = dateTime 
-                    ? `<span class="absolute top-2 left-2 bg-green-600/90 text-white text-xs px-2 py-1 rounded font-medium">${dateTime}</span>`
-                    : '<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium animate-pulse">LIVE</span>';
+if (video.category === 'live') {
+    const dateTime = extractDateTimeFromDescription(video.description);
+    let isLiveNow = false;
+    
+    // Controlla se la partita è in corso
+    if (video.description) {
+        const now = new Date();
+        const timeMatch = video.description.match(/ore\s*(\d{1,2})[:\.](\d{2})/i);
+        const dateMatch = video.description.match(/(\d{1,2})[\/\-](\d{1,2})[\/\-]?(\d{2,4})?/);
+        
+        if (timeMatch) {
+            let matchDate = new Date();
+            if (dateMatch) {
+                const day = parseInt(dateMatch[1]);
+                const month = parseInt(dateMatch[2]) - 1;
+                const year = dateMatch[3] ? parseInt(dateMatch[3]) : now.getFullYear();
+                matchDate = new Date(year, month, day);
             }
+            matchDate.setHours(parseInt(timeMatch[1]), parseInt(timeMatch[2]), 0);
+            
+            const diffMs = now - matchDate;
+            const diffHours = diffMs / (1000 * 60 * 60);
+            
+            // Se siamo entro 2 ore dall'inizio, è LIVE
+            if (diffHours >= -0.5 && diffHours <= 2) {
+                isLiveNow = true;
+            }
+        }
+    }
+    
+    if (isLiveNow) {
+        badge = '<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium animate-pulse">🔴 LIVE</span>';
+    } else if (dateTime) {
+        badge = `<span class="absolute top-2 left-2 bg-green-600/90 text-white text-xs px-2 py-1 rounded font-medium">${dateTime}</span>`;
+    } else {
+        badge = '<span class="absolute top-2 left-2 bg-red-600 text-white text-xs px-2 py-1 rounded font-medium animate-pulse">LIVE</span>';
+    }
+}
 
             const timeInfo = video.category === 'live' ? extractTimeFromDescription(video.description) : null;
             const infoText = timeInfo || `${views} views • ${likes} ❤️`;
@@ -1558,7 +1816,7 @@
             return `
                 <div class="video-card min-w-[200px] md:min-w-[280px] bg-gray-800 rounded-xl overflow-hidden cursor-pointer flex-shrink-0" onclick="playVideo('${video.id}')">
                     <div class="relative group">
-                        <img src="${thumb}" alt="${video.title}" class="w-full h-28 md:h-40 object-cover" onerror="this.src='https://via.placeholder.com/320x180?text=Video'">
+                        <img src="${thumb}" alt="${video.title}" class="w-full aspect-video object-cover" onerror="this.src='https://via.placeholder.com/320x180?text=Video'">
                         <div class="absolute inset-0 bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition">
                             <div class="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center">
                                 <svg class="w-6 h-6 text-gray-900 ml-1" fill="currentColor" viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
@@ -1569,8 +1827,8 @@
                             <svg class="w-4 h-4" fill="${isInWatchlist ? 'currentColor' : 'none'}" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z"></path></svg>
                         </button>
                     </div>
-                    <div class="p-4">
-                        <h4 class="font-semibold truncate">${video.title}</h4>
+                    <div class="p-4 h-24">
+                        <h4 class="font-semibold line-clamp-2">${video.title}</h4>
                         <p class="text-sm text-gray-400 mt-1">${infoText}</p>
                     </div>
                 </div>
@@ -1991,8 +2249,8 @@
                 container.innerHTML = newsCache.map(n => `
                     <div class="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:scale-[1.02] transition" onclick="showNewsArticle('${n.id}')">
                         ${n.image ? `<img src="${n.image}" class="w-full h-48 object-cover">` : '<div class="w-full h-48 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center text-6xl">📰</div>'}
-                        <div class="p-4">
-                            <h3 class="font-bold text-lg">${n.title}</h3>
+                        <div class="p-2">
+    <h4 class="font-semibold text-sm line-clamp-1">${video.title}</h4>
                             <p class="text-gray-400 text-sm mt-2">${n.date}</p>
                         </div>
                     </div>
@@ -2193,7 +2451,7 @@
         }
 
         function hideAllPages() {
-            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage', 'socialWallPage', 'gamesPage'].forEach(id => {
+            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage', 'socialWallPage', 'gamesPage', 'rosterPage'].forEach(id => {
                 const el = document.getElementById(id);
                 if (el) el.classList.add('hidden');
             });
@@ -2234,7 +2492,7 @@
         }
 
         function showAdminTab(tab) {
-            ['video', 'news', 'calendar', 'pronostici', 'points', 'users', 'logo', 'sponsor', 'mascot'].forEach(t => {
+            ['video', 'news', 'calendar', 'pronostici', 'points', 'users', 'logo', 'sponsor', 'mascot', 'roster'].forEach(t => {
                 document.getElementById('admin' + t.charAt(0).toUpperCase() + t.slice(1) + 'Tab').classList.add('hidden');
                 document.getElementById('tab' + t.charAt(0).toUpperCase() + t.slice(1)).classList.remove('active');
             });
@@ -2452,7 +2710,7 @@
                 return;
             }
             
-            container.innerHTML = newsCache.map(n => `
+            container.innerHTML = newsCache.reverse().map(n => `
                 <div class="flex flex-col md:flex-row md:items-center gap-3 bg-gray-700 rounded-lg p-3">
                     <div class="flex items-center gap-3 flex-1 min-w-0">
                         ${n.image ? `<img src="${n.image}" class="w-16 h-12 object-cover rounded">` : '<div class="w-16 h-12 bg-green-600 rounded flex items-center justify-center">📰</div>'}
@@ -3396,9 +3654,342 @@
             });
         }
 
+        // Roster Management
+        let campionatiCache = {
+            maschile: ['DR3', 'U19', 'U17 Gold'],
+            femminile: ['Serie C', 'U17', 'U15']
+        };
+        let rosterCache = [];
+        
+        function loadCampionati() {
+            db.ref('campionati').once('value', (snapshot) => {
+                if (snapshot.val()) {
+                    campionatiCache = snapshot.val();
+                }
+                updateCampionatiDropdown();
+                loadCampionatiAdmin();
+            });
+        }
+        
+        function updateCampionatiDropdown() {
+            const settore = document.getElementById('rosterSettore')?.value || 'maschile';
+            const select = document.getElementById('rosterCampionato');
+            if (!select) return;
+            
+            const campionati = campionatiCache[settore] || [];
+            select.innerHTML = campionati.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        
+        function updateCampionatiGiocatore() {
+            const settore = document.getElementById('giocatoreSettore')?.value || 'maschile';
+            const select = document.getElementById('giocatoreCampionato');
+            if (!select) return;
+            
+            const campionati = campionatiCache[settore] || [];
+            select.innerHTML = campionati.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        
+        function updateAdminCampionati() {
+            const settore = document.getElementById('adminRosterSettore')?.value || 'maschile';
+            const select = document.getElementById('adminRosterCampionato');
+            if (!select) return;
+            
+            const campionati = campionatiCache[settore] || [];
+            select.innerHTML = campionati.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        
+        function loadCampionatiAdmin() {
+            // Maschili
+            const maschiliContainer = document.getElementById('campionatiMaschili');
+            if (maschiliContainer) {
+                maschiliContainer.innerHTML = (campionatiCache.maschile || []).map(c => `
+                    <div class="flex items-center justify-between bg-gray-700 px-3 py-2 rounded-lg">
+                        <span>${c}</span>
+                        <button onclick="removeCampionato('maschile', '${c}')" class="text-red-400 hover:text-red-300">✕</button>
+                    </div>
+                `).join('');
+            }
+            
+            // Femminili
+            const femminiliContainer = document.getElementById('campionatiFemminili');
+            if (femminiliContainer) {
+                femminiliContainer.innerHTML = (campionatiCache.femminile || []).map(c => `
+                    <div class="flex items-center justify-between bg-gray-700 px-3 py-2 rounded-lg">
+                        <span>${c}</span>
+                        <button onclick="removeCampionato('femminile', '${c}')" class="text-red-400 hover:text-red-300">✕</button>
+                    </div>
+                `).join('');
+            }
+            
+            updateCampionatiGiocatore();
+            updateAdminCampionati();
+            
+            // Inizializza dropdown duplicazione
+            updateDuplicaCampionati('origine');
+            updateDuplicaCampionati('destinazione');
+        }
+        
+        function addCampionato(settore) {
+            const inputId = settore === 'maschile' ? 'newCampMaschile' : 'newCampFemminile';
+            const input = document.getElementById(inputId);
+            const nome = input.value.trim();
+            
+            if (!nome) return alert('Inserisci il nome del campionato');
+            if (campionatiCache[settore].includes(nome)) return alert('Campionato già esistente');
+            
+            campionatiCache[settore].push(nome);
+            db.ref('campionati').set(campionatiCache);
+            input.value = '';
+            loadCampionatiAdmin();
+        }
+        
+        function removeCampionato(settore, nome) {
+            if (!confirm(`Eliminare il campionato "${nome}"?`)) return;
+            
+            campionatiCache[settore] = campionatiCache[settore].filter(c => c !== nome);
+            db.ref('campionati').set(campionatiCache);
+            loadCampionatiAdmin();
+        }
+        
+        function showRoster() {
+            hideAllPages();
+            document.getElementById('rosterPage').classList.remove('hidden');
+            loadCampionati();
+            loadRoster();
+        }
+        
+        function loadRoster() {
+    const settore = document.getElementById('rosterSettore')?.value || 'maschile';
+    const campionato = document.getElementById('rosterCampionato')?.value;
+    if (!campionato) return;
+    const tbody = document.getElementById('rosterTableBody');
+    db.ref('roster/' + settore + '/' + campionato).on('value', (snapshot) => {
+        const giocatori = [];
+        snapshot.forEach(child => { giocatori.push({ id: child.key, ...child.val() }); });
+        giocatori.sort((a, b) => (a.numero || 0) - (b.numero || 0));
+        if (giocatori.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-8 text-center text-gray-500">Nessun giocatore</td></tr>';
+        } else {
+            tbody.innerHTML = giocatori.map(g => `
+                <tr class="border-t border-gray-700 hover:bg-gray-700/50">
+                    <td class="px-4 py-3"><div class="w-12 h-12 rounded-full bg-gray-600 overflow-hidden">${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center text-xl">🏀</div>'}</div></td>
+                    <td class="px-4 py-3 font-medium">${g.nome} ${g.cognome}</td>
+                    <td class="px-4 py-3 text-center"><span class="bg-green-600 px-3 py-1 rounded-full font-bold">${g.numero || '-'}</span></td>
+                    <td class="px-4 py-3">${g.ruolo || '-'}</td>
+                    <td class="px-4 py-3 text-center text-2xl">${g.nazione || '🇮🇹'}</td>
+                    <td class="px-4 py-3 text-center">${g.anno || '-'}</td>
+                </tr>
+            `).join('');
+        }
+    });
+}
+        
+        function loadAdminRoster() {
+    const settore = document.getElementById('adminRosterSettore')?.value || 'maschile';
+    const campionato = document.getElementById('adminRosterCampionato')?.value;
+    if (!campionato) return;
+    const container = document.getElementById('adminRosterList');
+    const noRoster = document.getElementById('noAdminRoster');
+    db.ref('roster/' + settore + '/' + campionato).on('value', (snapshot) => {
+        const giocatori = [];
+        snapshot.forEach(child => { giocatori.push({ id: child.key, ...child.val() }); });
+        giocatori.sort((a, b) => (a.numero || 0) - (b.numero || 0));
+        if (giocatori.length === 0) {
+            container.innerHTML = '';
+            noRoster?.classList.remove('hidden');
+        } else {
+            noRoster?.classList.add('hidden');
+            container.innerHTML = giocatori.map(g => `
+                <div class="flex items-center gap-3 bg-gray-700 rounded-lg p-3">
+                    <div class="w-12 h-12 rounded-full bg-gray-600 overflow-hidden">${g.foto ? `<img src="${g.foto}" class="w-full h-full object-cover">` : '<div class="w-full h-full flex items-center justify-center">🏀</div>'}</div>
+                    <div class="flex-1"><p class="font-medium">#${g.numero || '?'} ${g.nome} ${g.cognome}</p><p class="text-sm text-gray-400">${g.ruolo} • ${g.nazione} • ${g.anno}</p></div>
+                    <div class="flex gap-2">
+                        <button onclick="editGiocatore('${settore}', '${campionato}', '${g.id}')" class="bg-blue-600 px-3 py-1 rounded hover:bg-blue-700 text-sm">✏️</button>
+                        <button onclick="deleteGiocatore('${settore}', '${campionato}', '${g.id}')" class="bg-red-600 px-3 py-1 rounded hover:bg-red-700 text-sm">🗑️</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    });
+}
+        
+        // Preview foto giocatore
+        document.getElementById('giocatoreFotoInput')?.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (file) {
+                if (file.size > 500000) {
+                    alert('Immagine troppo grande (max 500KB)');
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    document.getElementById('giocatorePreviewImg').src = event.target.result;
+                    document.getElementById('giocatoreFotoPreview').classList.remove('hidden');
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+        
+        let editingGiocatore = null;
+        
+        function saveGiocatore() {
+            const settore = document.getElementById('giocatoreSettore').value;
+            const campionato = document.getElementById('giocatoreCampionato').value;
+            const nome = document.getElementById('giocatoreNome').value.trim();
+            const cognome = document.getElementById('giocatoreCognome').value.trim();
+            const numero = document.getElementById('giocatoreNumero').value;
+            const ruolo = document.getElementById('giocatoreRuolo').value;
+            const nazione = document.getElementById('giocatoreNazione').value;
+            const anno = document.getElementById('giocatoreAnno').value;
+            
+            if (!nome || !cognome) return alert('Inserisci nome e cognome');
+            if (!campionato) return alert('Seleziona un campionato');
+            
+            const fotoPreview = document.getElementById('giocatorePreviewImg');
+            const foto = fotoPreview?.src && !fotoPreview.src.includes('undefined') && !fotoPreview.classList.contains('hidden') ? fotoPreview.src : null;
+            
+            const giocatoreData = {
+                nome, cognome, numero: parseInt(numero) || 0,
+                ruolo, nazione, anno: parseInt(anno) || 2000,
+                foto
+            };
+            
+            const saveRef = editingGiocatore 
+                ? db.ref('roster/' + editingGiocatore.settore + '/' + editingGiocatore.campionato + '/' + editingGiocatore.id)
+                : db.ref('roster/' + settore + '/' + campionato).push();
+            
+            saveRef.set(giocatoreData).then(() => {
+                if (editingGiocatore) cancelGiocatoreEdit();
+                
+                // Reset form
+                document.getElementById('giocatoreNome').value = '';
+                document.getElementById('giocatoreCognome').value = '';
+                document.getElementById('giocatoreNumero').value = '';
+                document.getElementById('giocatoreAnno').value = '';
+                document.getElementById('giocatoreFotoInput').value = '';
+                document.getElementById('giocatoreFotoPreview').classList.add('hidden');
+                document.getElementById('giocatorePreviewImg').src = '';
+                
+                loadAdminRoster();
+                alert('Giocatore salvato!');
+            }).catch(err => {
+                console.error('Errore salvataggio giocatore:', err);
+                alert('Errore nel salvataggio');
+            });
+        }
+        
+        function editGiocatore(settore, campionato, id) {
+            db.ref('roster/' + settore + '/' + campionato + '/' + id).once('value', (snapshot) => {
+                const g = snapshot.val();
+                if (!g) return;
+                
+                editingGiocatore = { settore, campionato, id };
+                
+                document.getElementById('giocatoreSettore').value = settore;
+                updateCampionatiGiocatore();
+                setTimeout(() => {
+                    document.getElementById('giocatoreCampionato').value = campionato;
+                }, 100);
+                
+                document.getElementById('giocatoreNome').value = g.nome;
+                document.getElementById('giocatoreCognome').value = g.cognome;
+                document.getElementById('giocatoreNumero').value = g.numero;
+                document.getElementById('giocatoreRuolo').value = g.ruolo;
+                document.getElementById('giocatoreNazione').value = g.nazione;
+                document.getElementById('giocatoreAnno').value = g.anno;
+                
+                if (g.foto) {
+                    document.getElementById('giocatorePreviewImg').src = g.foto;
+                    document.getElementById('giocatoreFotoPreview').classList.remove('hidden');
+                }
+                
+                document.getElementById('giocatoreFormTitle').textContent = '✏️ Modifica Giocatore';
+                document.getElementById('giocatoreSubmitBtn').textContent = 'Salva Modifiche';
+                document.getElementById('giocatoreCancelBtn').classList.remove('hidden');
+                
+                document.getElementById('adminRosterTab').scrollIntoView({ behavior: 'smooth' });
+            });
+        }
+        
+        function cancelGiocatoreEdit() {
+            editingGiocatore = null;
+            document.getElementById('giocatoreFormTitle').textContent = '➕ Aggiungi Giocatore';
+            document.getElementById('giocatoreSubmitBtn').textContent = 'Aggiungi Giocatore';
+            document.getElementById('giocatoreCancelBtn').classList.add('hidden');
+            
+            document.getElementById('giocatoreNome').value = '';
+            document.getElementById('giocatoreCognome').value = '';
+            document.getElementById('giocatoreNumero').value = '';
+            document.getElementById('giocatoreAnno').value = '';
+            document.getElementById('giocatoreFotoInput').value = '';
+            document.getElementById('giocatoreFotoPreview').classList.add('hidden');
+        }
+        
+        function deleteGiocatore(settore, campionato, id) {
+            if (!confirm('Eliminare questo giocatore?')) return;
+            db.ref('roster/' + settore + '/' + campionato + '/' + id).remove();
+            loadAdminRoster();
+        }
+        
+        // Duplica Roster Functions
+        function updateDuplicaCampionati(tipo) {
+            const settoreId = tipo === 'origine' ? 'duplicaSettoreOrigine' : 'duplicaSettoreDestinazione';
+            const campionatoId = tipo === 'origine' ? 'duplicaCampionatoOrigine' : 'duplicaCampionatoDestinazione';
+            
+            const settore = document.getElementById(settoreId)?.value || 'maschile';
+            const select = document.getElementById(campionatoId);
+            if (!select) return;
+            
+            const campionati = campionatiCache[settore] || [];
+            select.innerHTML = campionati.map(c => `<option value="${c}">${c}</option>`).join('');
+        }
+        
+        function initDuplicaCampionati() {
+            updateDuplicaCampionati('origine');
+            updateDuplicaCampionati('destinazione');
+        }
+        
+        function duplicaRoster() {
+            const settoreOrigine = document.getElementById('duplicaSettoreOrigine').value;
+            const campionatoOrigine = document.getElementById('duplicaCampionatoOrigine').value;
+            const settoreDestinazione = document.getElementById('duplicaSettoreDestinazione').value;
+            const campionatoDestinazione = document.getElementById('duplicaCampionatoDestinazione').value;
+            
+            if (!campionatoOrigine || !campionatoDestinazione) {
+                return alert('Seleziona entrambi i campionati');
+            }
+            
+            if (settoreOrigine === settoreDestinazione && campionatoOrigine === campionatoDestinazione) {
+                return alert('I campionati di origine e destinazione devono essere diversi');
+            }
+            
+            if (!confirm(`Duplicare il roster da "${campionatoOrigine}" a "${campionatoDestinazione}"?\n\nATTENZIONE: I giocatori già presenti in "${campionatoDestinazione}" verranno mantenuti, i nuovi verranno aggiunti.`)) {
+                return;
+            }
+            
+            db.ref('roster/' + settoreOrigine + '/' + campionatoOrigine).once('value', (snapshot) => {
+                const giocatori = [];
+                snapshot.forEach(child => giocatori.push(child.val()));
+                
+                if (giocatori.length === 0) {
+                    return alert('Nessun giocatore nel roster di origine');
+                }
+                
+                let added = 0;
+                giocatori.forEach(g => {
+                    db.ref('roster/' + settoreDestinazione + '/' + campionatoDestinazione).push().set(g);
+                    added++;
+                });
+                
+                alert(`✅ ${added} giocatori duplicati da "${campionatoOrigine}" a "${campionatoDestinazione}"!`);
+                loadAdminRoster();
+            });
+        }
+
         // Initialize
         initFirebase();
         loadSponsors();
+        loadCampionati();
     </script>
 </body>
 </html>

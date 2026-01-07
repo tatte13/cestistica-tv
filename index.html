@@ -1676,15 +1676,26 @@
             const saved = localStorage.getItem('cesticaUser');
             if (saved) {
                 currentUser = JSON.parse(saved);
-                // Daily login bonus
-                const today = new Date().toDateString();
-                if (currentUser.lastLogin !== today) {
-                    addPoints(3);
-                    currentUser.lastLogin = today;
-                    db.ref('users/' + currentUser.id).update({ lastLogin: today });
-                    localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
-                }
-                showMainApp();
+                
+                // Aggiorna dati utente da Firebase
+                db.ref('users/' + currentUser.id).once('value', (snapshot) => {
+                    if (snapshot.exists()) {
+                        const userData = snapshot.val();
+                        currentUser.points = userData.points || 0;
+                        currentUser.profilePhoto = userData.profilePhoto || null;
+                        localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                    }
+                    
+                    // Daily login bonus
+                    const today = new Date().toDateString();
+                    if (currentUser.lastLogin !== today) {
+                        addPoints(3);
+                        currentUser.lastLogin = today;
+                        db.ref('users/' + currentUser.id).update({ lastLogin: today });
+                        localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                    }
+                    showMainApp();
+                });
             } else {
                 document.getElementById('authModal').classList.remove('hidden');
             }
@@ -3375,19 +3386,33 @@ function sendLiveChat() {
                 Object.entries(prono.bets).forEach(([odieId, betData]) => {
                     if (betData.teamNum === winner) {
                         const winAmount = Math.floor(betData.amount * betData.quota);
-                        const user = usersCache.find(u => u.id === odieId);
-                        if (user) {
-                            const newPoints = (user.points || 0) + winAmount;
+                        
+                        // Leggi punti attuali da Firebase e aggiungi
+                        db.ref('users/' + odieId + '/points').once('value', (snapshot) => {
+                            const currentPoints = snapshot.val() || 0;
+                            const newPoints = currentPoints + winAmount;
                             db.ref('users/' + odieId).update({ points: newPoints });
                             
-                            // Invia notifica
-                            db.ref('notifications/' + odieId).push({
-                                type: 'win',
-                                message: `🎉 Hai vinto ${winAmount} punti! ${winnerName} ha vinto.`,
-                                date: Date.now(),
-                                read: false
-                            });
-                        }
+                            // Aggiorna cache locale se è l'utente corrente
+                            if (currentUser && currentUser.id === odieId) {
+                                currentUser.points = newPoints;
+                                localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                            }
+                            
+                            // Aggiorna usersCache
+                            const userIndex = usersCache.findIndex(u => u.id === odieId);
+                            if (userIndex !== -1) {
+                                usersCache[userIndex].points = newPoints;
+                            }
+                        });
+                        
+                        // Invia notifica
+                        db.ref('notifications/' + odieId).push({
+                            type: 'win',
+                            message: `🎉 Hai vinto ${winAmount} punti! ${winnerName} ha vinto.`,
+                            date: Date.now(),
+                            read: false
+                        });
                     } else {
                         // Notifica sconfitta
                         db.ref('notifications/' + odieId).push({
@@ -3402,7 +3427,7 @@ function sendLiveChat() {
             
             // Segna il risultato
             db.ref('pronostici/' + id).update({ result: winner });
-            alert(`Risultato registrato! ${winnerName} ha vinto. Vincite pagate in base alle quote!`);
+            alert(`Risultato registrato! ${winnerName} ha vinto. Vincite pagate!`);
         }
 
         function loadMembersList() {

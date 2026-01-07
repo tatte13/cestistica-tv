@@ -277,6 +277,20 @@
                 </nav>
                 
                 <div class="flex items-center gap-2 md:gap-4">
+                    <!-- Notifiche -->
+                    <div class="relative">
+                        <button onclick="toggleNotifications()" class="relative p-2 hover:bg-gray-700 rounded-full">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
+                            <span id="notifBadge" class="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center hidden">0</span>
+                        </button>
+                        <div id="notifDropdown" class="absolute right-0 mt-2 w-80 bg-gray-800 rounded-xl shadow-2xl hidden border border-gray-700 z-50">
+                            <div class="p-3 border-b border-gray-700 flex justify-between items-center">
+                                <span class="font-bold">🔔 Notifiche</span>
+                                <button onclick="clearNotifications()" class="text-xs text-gray-400 hover:text-white">Cancella tutto</button>
+                            </div>
+                            <div id="notifList" class="max-h-64 overflow-y-auto"></div>
+                        </div>
+                    </div>
                     <div class="relative hidden md:block">
                         <input type="text" id="searchInput" placeholder="Cerca..." class="bg-gray-800 pl-10 pr-4 py-2 rounded-full text-sm w-40 border border-gray-700" onkeyup="searchVideos()">
                         <svg class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -1752,6 +1766,7 @@
             }
             
             loadVideos();
+            loadNotifications();
             initHeroCarousel();
         }
 
@@ -2756,6 +2771,14 @@ function sendLiveChat() {
             bets[currentUser.id] = { team: teamName, teamNum, amount, quota };
             db.ref('pronostici/' + pronoId).update({ bets });
             
+             // Notifica scommessa piazzata
+            db.ref('notifications/' + currentUser.id).push({
+                type: 'bet',
+                message: `✅ Scommessa piazzata: ${amount} punti su ${teamName} a quota ${quota}`,
+                date: Date.now(),
+                read: false
+            });   
+                
             alert('Scommessa piazzata! Forza ' + teamName + '! 🏀');
             amountInput.value = '';
         }
@@ -3356,7 +3379,23 @@ function sendLiveChat() {
                         if (user) {
                             const newPoints = (user.points || 0) + winAmount;
                             db.ref('users/' + odieId).update({ points: newPoints });
+                            
+                            // Invia notifica
+                            db.ref('notifications/' + odieId).push({
+                                type: 'win',
+                                message: `🎉 Hai vinto ${winAmount} punti! ${winnerName} ha vinto.`,
+                                date: Date.now(),
+                                read: false
+                            });
                         }
+                    } else {
+                        // Notifica sconfitta
+                        db.ref('notifications/' + odieId).push({
+                            type: 'loss',
+                            message: `😔 Hai perso ${betData.amount} punti. ${winnerName} ha vinto.`,
+                            date: Date.now(),
+                            read: false
+                        });
                     }
                 });
             }
@@ -4357,7 +4396,86 @@ function sendLiveChat() {
             });
         }
 
-        // Initialize
+        // Notifiche
+        let notificationsCache = [];
+        
+        function loadNotifications() {
+            if (!currentUser) return;
+            
+            db.ref('notifications/' + currentUser.id).orderByChild('date').limitToLast(20).on('value', (snapshot) => {
+                notificationsCache = [];
+                snapshot.forEach(child => {
+                    notificationsCache.push({ id: child.key, ...child.val() });
+                });
+                notificationsCache.reverse();
+                updateNotifBadge();
+                renderNotifications();
+            });
+        }
+        
+        function updateNotifBadge() {
+            const unread = notificationsCache.filter(n => !n.read).length;
+            const badge = document.getElementById('notifBadge');
+            if (badge) {
+                if (unread > 0) {
+                    badge.textContent = unread > 9 ? '9+' : unread;
+                    badge.classList.remove('hidden');
+                } else {
+                    badge.classList.add('hidden');
+                }
+            }
+        }
+        
+        function renderNotifications() {
+            const container = document.getElementById('notifList');
+            if (!container) return;
+            
+            if (notificationsCache.length === 0) {
+                container.innerHTML = '<p class="p-4 text-gray-500 text-center text-sm">Nessuna notifica</p>';
+            } else {
+                container.innerHTML = notificationsCache.map(n => {
+                    const time = new Date(n.date).toLocaleString('it-IT', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+                    const bgColor = n.read ? 'bg-gray-800' : 'bg-gray-700';
+                    const icon = n.type === 'win' ? '🎉' : n.type === 'loss' ? '😔' : '🔔';
+                    return `
+                        <div class="${bgColor} p-3 border-b border-gray-700 hover:bg-gray-600 cursor-pointer" onclick="markNotifRead('${n.id}')">
+                            <div class="flex gap-2">
+                                <span>${icon}</span>
+                                <div class="flex-1">
+                                    <p class="text-sm">${n.message}</p>
+                                    <p class="text-xs text-gray-500 mt-1">${time}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+        
+        function toggleNotifications() {
+            const dropdown = document.getElementById('notifDropdown');
+            dropdown.classList.toggle('hidden');
+        }
+        
+        function markNotifRead(id) {
+            db.ref('notifications/' + currentUser.id + '/' + id).update({ read: true });
+        }
+        
+        function clearNotifications() {
+            if (!confirm('Cancellare tutte le notifiche?')) return;
+            db.ref('notifications/' + currentUser.id).remove();
+        }
+        
+        // Chiudi dropdown cliccando fuori
+        document.addEventListener('click', (e) => {
+            const dropdown = document.getElementById('notifDropdown');
+            const bell = e.target.closest('button');
+            if (dropdown && !dropdown.contains(e.target) && !bell?.onclick?.toString().includes('toggleNotifications')) {
+                dropdown.classList.add('hidden');
+            }
+        });
+    
+    // Initialize
         initFirebase();
         loadSponsors();
         loadCampionati();

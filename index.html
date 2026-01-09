@@ -2081,16 +2081,22 @@
         function loadVideos() {
             ['live', 'replays', 'highlights', 'altro'].forEach(category => {
                 const container = document.getElementById(category + 'Videos');
-                const videos = videosCache.filter(v => v.category === category); if (category === 'live') {
-    videos.sort((a, b) => (extractDateTimeFromDescription(a.description) || '').localeCompare(extractDateTimeFromDescription(b.description) || ''));
-} else {
-    videos.reverse();
-}
+                let videos = videosCache.filter(v => v.category === category);
+                
+                if (category === 'live') {
+                    // Live: ordina per data partita
+                    videos.sort((a, b) => (extractDateTimeFromDescription(a.description) || '').localeCompare(extractDateTimeFromDescription(b.description) || ''));
+                } else {
+                    // Altri: i più recenti prima (per timestamp)
+                    videos.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+                }
+                
                 container.innerHTML = videos.length === 0 ? '<p class="text-gray-500 py-4">Nessun video</p>' : videos.map(v => createVideoCard(v)).join('');
             });
             if (currentUser?.isAdmin) loadAdminVideoList();
         }
-
+                
+       
         function createVideoCard(video) {
             const videoId = extractYouTubeId(video.url);
             const thumb = video.thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : 'https://via.placeholder.com/320x180?text=Video');
@@ -2929,7 +2935,8 @@ function sendLiveChat() {
             const newVideo = { 
                 title, url, category, description, 
                 thumbnail: thumbnail || (videoId ? `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` : ''), 
-                date: new Date().toLocaleDateString('it-IT'), 
+                date: new Date().toLocaleDateString('it-IT'),
+                timestamp: Date.now(),
                 views: 0, likes: 0, comments: [] 
             };
             db.ref('videos').push().set(newVideo);

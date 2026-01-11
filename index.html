@@ -111,6 +111,7 @@
                 <input type="password" id="loginPassword" placeholder="Password" class="w-full p-3 rounded-lg bg-gray-700 mb-4 border border-gray-600">
                 <button onclick="login()" class="w-full gradient-bg text-white py-3 rounded-lg font-semibold hover:opacity-90 transition">Accedi</button>
                 <p class="text-center mt-4 text-gray-400 text-sm">Non hai un account? <span onclick="showRegister()" class="text-green-400 cursor-pointer hover:underline">Registrati gratis</span></p>
+                <p class="text-center mt-2 text-gray-400 text-sm"><span onclick="showForgotPassword()" class="text-yellow-400 cursor-pointer hover:underline">Password dimenticata?</span></p>
             </div>
             
             <div id="registerForm" class="hidden">
@@ -150,6 +151,7 @@
             <hr class="border-gray-700 my-4">
             <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👤 Profilo</button>
             <button onclick="showBiancoverdiCard(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎫 Biancoverdi Card</button>
+            <button onclick="changePassword(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🔑 Cambia Password</button>
             <button onclick="showAdmin(); closeMobileMenu();" id="mobileAdminBtn" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 hidden">⚙️ Admin</button>
             <button onclick="logout()" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3 text-red-400">🚪 Esci</button>
         </nav>
@@ -305,6 +307,7 @@
                         <div class="absolute right-0 mt-2 w-48 bg-gray-800 rounded-lg shadow-xl hidden group-hover:block border border-gray-700">
                             <button onclick="showUserDetails()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-t-lg">👤 Profilo</button>
                             <button onclick="showBiancoverdiCard()" class="w-full text-left px-4 py-3 hover:bg-gray-700">🎫 Biancoverdi Card</button>
+                            <button onclick="changePassword()" class="w-full text-left px-4 py-3 hover:bg-gray-700">🔑 Cambia Password</button>
                             <button onclick="showAdmin()" id="adminBtn" class="w-full text-left px-4 py-3 hover:bg-gray-700 hidden">⚙️ Admin</button>
                             <button onclick="logout()" class="w-full text-left px-4 py-3 hover:bg-gray-700 rounded-b-lg text-red-400">🚪 Esci</button>
                         </div>
@@ -1488,10 +1491,41 @@
                 noMsg?.classList.add('hidden');
                 container.innerHTML = bettingCache.map(b => {
                     const totalBets = b.bets ? Object.keys(b.bets).length : 0;
+                    
+                    // Lista scommesse
+                    let betsList = '';
+                    if (b.bets && Object.keys(b.bets).length > 0) {
+                        betsList = `
+                            <div class="border-t border-gray-600 mt-3 pt-3">
+                                <button onclick="toggleBetsList('betting_${b.id}')" class="text-sm text-blue-400 hover:text-blue-300 mb-2">
+                                    📊 Vedi scommesse (${totalBets})
+                                </button>
+                                <div id="betsList_betting_${b.id}" class="hidden space-y-2 mt-2">
+                                    ${Object.entries(b.bets).map(([userId, betData]) => {
+                                        const user = usersCache.find(u => u.id === userId);
+                                        const username = user ? user.username : 'Utente sconosciuto';
+                                        return `
+                                            <div class="bg-gray-800 rounded p-2 flex items-center justify-between text-sm">
+                                                <div>
+                                                    <span class="font-medium">${username}</span>
+                                                    <span class="text-gray-400"> • ${betData.amount} punti su ${betData.choice.toUpperCase()}</span>
+                                                    <span class="text-green-400"> • Quota: ${betData.quota}</span>
+                                                </div>
+                                                <button onclick="cancelBettingBet('${b.id}', '${userId}')" class="text-red-400 hover:text-red-300 text-xs">
+                                                    ❌ Annulla
+                                                </button>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
                     return `
                     <div class="bg-gray-700 rounded-lg p-4">
                         <div class="flex justify-between items-start">
-                            <div>
+                            <div class="flex-1">
                                 <p class="font-bold">${b.player} - ${b.type} ${b.line}</p>
                                 <p class="text-sm text-gray-400">${b.match}</p>
                                 <p class="text-sm text-gray-400">Quote: OVER ${b.quotaOver} | UNDER ${b.quotaUnder}</p>
@@ -1506,6 +1540,7 @@
                                 ` : `<span class="text-green-400 text-sm">✓ ${b.result.toUpperCase()} ha vinto</span>`}
                             </div>
                         </div>
+                        ${betsList}
                     </div>
                 `}).join('');
             }
@@ -1560,7 +1595,101 @@ function deleteBetting(betId) {
             db.ref('betting/' + betId).remove();
         }
 
+  // Funzioni per mostrare/nascondere liste scommesse
+        function toggleBetsList(id) {
+            const list = document.getElementById('betsList_' + id);
+            if (list) {
+                list.classList.toggle('hidden');
+            }
+        }
         
+        // Annulla singola scommessa su Pronostico
+        function cancelPronoBet(pronoId, userId) {
+            const prono = pronosticiCache.find(p => p.id === pronoId);
+            if (!prono || !prono.bets || !prono.bets[userId]) return;
+            
+            const betData = prono.bets[userId];
+            const user = usersCache.find(u => u.id === userId);
+            
+            if (!confirm(`Annullare la scommessa di ${user?.username || 'questo utente'}?\n${betData.amount} punti su ${betData.team} verranno restituiti.`)) return;
+            
+            // Restituisci punti
+            db.ref('users/' + userId + '/points').once('value', (snapshot) => {
+                const currentPoints = snapshot.val() || 0;
+                const newPoints = currentPoints + betData.amount;
+                db.ref('users/' + userId).update({ points: newPoints });
+                
+                // Aggiorna cache locale se è l'utente corrente
+                if (currentUser && currentUser.id === userId) {
+                    currentUser.points = newPoints;
+                    localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                }
+                
+                // Aggiorna usersCache
+                const userIndex = usersCache.findIndex(u => u.id === userId);
+                if (userIndex !== -1) {
+                    usersCache[userIndex].points = newPoints;
+                }
+            });
+            
+            // Rimuovi scommessa
+            delete prono.bets[userId];
+            db.ref('pronostici/' + pronoId + '/bets').set(prono.bets);
+            
+            // Invia notifica
+            db.ref('notifications/' + userId).push({
+                type: 'info',
+                message: `ℹ️ La tua scommessa su ${prono.team1} vs ${prono.team2} è stata annullata. ${betData.amount} punti restituiti.`,
+                date: Date.now(),
+                read: false
+            });
+            
+            alert('Scommessa annullata e punti restituiti!');
+        }
+        
+        // Annulla singola scommessa su Betting
+        function cancelBettingBet(betId, userId) {
+            const bet = bettingCache.find(b => b.id === betId);
+            if (!bet || !bet.bets || !bet.bets[userId]) return;
+            
+            const betData = bet.bets[userId];
+            const user = usersCache.find(u => u.id === userId);
+            
+            if (!confirm(`Annullare la scommessa di ${user?.username || 'questo utente'}?\n${betData.amount} punti su ${betData.choice.toUpperCase()} verranno restituiti.`)) return;
+            
+            // Restituisci punti
+            db.ref('users/' + userId + '/points').once('value', (snapshot) => {
+                const currentPoints = snapshot.val() || 0;
+                const newPoints = currentPoints + betData.amount;
+                db.ref('users/' + userId).update({ points: newPoints });
+                
+                // Aggiorna cache locale se è l'utente corrente
+                if (currentUser && currentUser.id === userId) {
+                    currentUser.points = newPoints;
+                    localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                }
+                
+                // Aggiorna usersCache
+                const userIndex = usersCache.findIndex(u => u.id === userId);
+                if (userIndex !== -1) {
+                    usersCache[userIndex].points = newPoints;
+                }
+            });
+            
+            // Rimuovi scommessa
+            delete bet.bets[userId];
+            db.ref('betting/' + betId + '/bets').set(bet.bets);
+            
+            // Invia notifica
+            db.ref('notifications/' + userId).push({
+                type: 'info',
+                message: `ℹ️ La tua scommessa su ${bet.player} (${bet.type} ${bet.choice.toUpperCase()}) è stata annullata. ${betData.amount} punti restituiti.`,
+                date: Date.now(),
+                read: false
+            });
+            
+            alert('Scommessa annullata e punti restituiti!');
+        }      
     
     // Initialize Firebase
         function initFirebase() {
@@ -1766,7 +1895,54 @@ function deleteBetting(betId) {
             document.getElementById('loginForm').classList.add('hidden');
             document.getElementById('registerForm').classList.remove('hidden');
         }
+function changePassword() {
+            const currentPass = prompt('Inserisci la password attuale:');
+            if (!currentPass) return;
+            
+            if (currentPass !== currentUser.password) {
+                alert('❌ Password attuale non corretta!');
+                return;
+            }
+            
+            const newPass = prompt('Inserisci la nuova password (minimo 6 caratteri):');
+            if (!newPass) return;
+            
+            if (newPass.length < 6) {
+                alert('❌ La password deve essere di almeno 6 caratteri!');
+                return;
+            }
+            
+            const confirmPass = prompt('Conferma la nuova password:');
+            if (confirmPass !== newPass) {
+                alert('❌ Le password non coincidono!');
+                return;
+            }
+            
+            // Aggiorna password
+            currentUser.password = newPass;
+            db.ref('users/' + currentUser.id).update({ password: newPass });
+            localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+            
+            alert('✅ Password cambiata con successo!');
+        }
 
+        
+    function showForgotPassword() {
+            const email = prompt('Inserisci la tua email:');
+            if (!email) return;
+            
+            const user = usersCache.find(u => u.email === email);
+            if (user) {
+                // Genera password temporanea
+                const tempPassword = 'Temp' + Math.random().toString(36).substring(2, 8);
+                db.ref('users/' + user.id).update({ password: tempPassword });
+                alert(`Password resettata!\n\nNuova password temporanea: ${tempPassword}\n\nCambiala dopo il login!`);
+            } else {
+                alert('Email non trovata. Controlla di aver inserito l\'email corretta.');
+            }
+        }
+
+        
         function showAuthError(msg) {
             const el = document.getElementById('authError');
             el.textContent = msg;
@@ -2607,7 +2783,7 @@ function sendLiveChat() {
                 emptyMsg.classList.remove('hidden');
             } else {
                 emptyMsg.classList.add('hidden');
-                container.innerHTML = newsCache.map(n => `
+                container.innerHTML = [...newsCache].reverse().map(n => `
                     <div class="bg-gray-800 rounded-xl overflow-hidden cursor-pointer hover:scale-[1.02] transition" onclick="showNewsArticle('${n.id}')">
                         ${n.image ? `<img src="${n.image}" class="w-full h-48 object-cover">` : '<div class="w-full h-48 bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center text-6xl">📰</div>'}
                         <div class="p-2">
@@ -3284,6 +3460,36 @@ function sendLiveChat() {
                     const votes2 = p.votes ? Object.values(p.votes).filter(v => v === 2).length : 0;
                     const totalVotes = votes1 + votes2;
                     
+                    // Lista scommesse
+                    let betsList = '';
+                    if (p.bets && Object.keys(p.bets).length > 0) {
+                        betsList = `
+                            <div class="border-t border-gray-600 mt-3 pt-3">
+                                <button onclick="toggleBetsList('prono_${p.id}')" class="text-sm text-blue-400 hover:text-blue-300 mb-2">
+                                    📊 Vedi scommesse (${Object.keys(p.bets).length})
+                                </button>
+                                <div id="betsList_prono_${p.id}" class="hidden space-y-2 mt-2">
+                                    ${Object.entries(p.bets).map(([userId, betData]) => {
+                                        const user = usersCache.find(u => u.id === userId);
+                                        const username = user ? user.username : 'Utente sconosciuto';
+                                        return `
+                                            <div class="bg-gray-800 rounded p-2 flex items-center justify-between text-sm">
+                                                <div>
+                                                    <span class="font-medium">${username}</span>
+                                                    <span class="text-gray-400"> • ${betData.amount} punti su ${betData.team}</span>
+                                                    <span class="text-green-400"> • Quota: ${betData.quota}</span>
+                                                </div>
+                                                <button onclick="cancelPronoBet('${p.id}', '${userId}')" class="text-red-400 hover:text-red-300 text-xs">
+                                                    ❌ Annulla
+                                                </button>
+                                            </div>
+                                        `;
+                                    }).join('')}
+                                </div>
+                            </div>
+                        `;
+                    }
+                    
                     return `
                         <div class="bg-gray-700 rounded-xl p-4">
                             <div class="flex justify-between items-start mb-3">
@@ -3310,7 +3516,9 @@ function sendLiveChat() {
                                 </div>
                             </div>
                             
-                            <div class="border-t border-gray-600 pt-3">
+                            ${betsList}
+                            
+                            <div class="border-t border-gray-600 pt-3 mt-3">
                                 <p class="text-sm text-gray-400 mb-2">🏆 Segna risultato finale:</p>
                                 <div class="grid grid-cols-2 gap-2">
                                     <button onclick="setPronoResult('${p.id}', 1, '${p.team1}')" class="bg-green-600 hover:bg-green-700 px-3 py-2 rounded-lg text-sm font-medium transition">

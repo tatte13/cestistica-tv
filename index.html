@@ -4263,7 +4263,7 @@ function deletePronostico(id) {
                     </div>
                     <div class="flex items-center gap-2">
                         <span class="text-green-400 font-bold">${u.points || 0} 💚</span>
-                        <input type="number" id="pointsInput_${u.id}" placeholder="+/-" class="w-20 bg-gray-600 px-2 py-1 rounded text-sm border border-gray-500 text-center">
+                        <input type="text" inputmode="decimal" id="pointsInput_${u.id}" placeholder="+/- punti" class="w-20 bg-gray-600 px-2 py-1 rounded text-sm border border-gray-500 text-center">
                         <button onclick="applyPoints('${u.id}')" class="bg-green-600 px-3 py-1 rounded hover:bg-green-700 text-sm">Applica</button>
                     </div>
                 </div>
@@ -4272,34 +4272,73 @@ function deletePronostico(id) {
         
         function applyPoints(userId) {
             const input = document.getElementById('pointsInput_' + userId);
-            const pointsChange = parseInt(input.value);
+            const inputValue = input.value.trim();
+            
+            // Rimuovi spazi e converti in numero
+            const pointsChange = parseInt(inputValue);
             
             if (isNaN(pointsChange) || pointsChange === 0) {
-                alert('Inserisci un valore valido');
+                alert('Inserisci un numero valido (es: +50 o -30)');
                 return;
             }
             
             const user = usersCache.find(u => u.id === userId);
             if (!user) return;
             
-            const newPoints = Math.max(0, (user.points || 0) + pointsChange);
-            
-            // Aggiorna punti utente
-            db.ref('users/' + userId).update({ points: newPoints });
-            
-            // Salva movimento nello storico
-            db.ref('pointsHistory').push({
-                userId: userId,
-                username: user.username,
-                change: pointsChange,
-                newTotal: newPoints,
-                adminUsername: currentUser.username,
-                date: new Date().toLocaleDateString('it-IT'),
-                time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })
+            // CRITICO: Leggi i punti attuali direttamente da Firebase
+            db.ref('users/' + userId + '/points').once('value', (snapshot) => {
+                const currentPointsFromDB = snapshot.val() || 0;
+                const newPoints = Math.max(0, currentPointsFromDB + pointsChange);
+                
+                // Controlla se andrebbe sotto zero
+                if (newPoints < 0) {
+                    alert(`❌ Impossibile! ${user.username} ha solo ${currentPointsFromDB} punti.\nNon puoi togliere ${Math.abs(pointsChange)} punti.`);
+                    return;
+                }
+                
+                // Aggiorna Firebase
+                db.ref('users/' + userId).update({ points: newPoints }).then(() => {
+                    
+                    // Aggiorna cache locale
+                    const userIndex = usersCache.findIndex(u => u.id === userId);
+                    if (userIndex !== -1) {
+                        usersCache[userIndex].points = newPoints;
+                    }
+                    
+                    // Se è l'utente corrente, aggiorna anche localStorage
+                    if (currentUser && currentUser.id === userId) {
+                        currentUser.points = newPoints;
+                        localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+                    }
+                    
+                    // Salva movimento nello storico
+                    db.ref('pointsHistory').push({
+                        userId: userId,
+                        username: user.username,
+                        change: pointsChange,
+                        oldTotal: currentPointsFromDB,
+                        newTotal: newPoints,
+                        adminUsername: currentUser.username,
+                        date: new Date().toLocaleDateString('it-IT'),
+                        time: new Date().toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+                        timestamp: Date.now()
+                    });
+                    
+                    // Invia notifica all'utente
+                    db.ref('notifications/' + userId).push({
+                        type: pointsChange > 0 ? 'win' : 'info',
+                        message: `${pointsChange > 0 ? '🎉' : 'ℹ️'} ${pointsChange > 0 ? '+' : ''}${pointsChange} Biancoverdi Points da admin. Nuovo totale: ${newPoints}`,
+                        date: Date.now(),
+                        read: false
+                    });
+                    
+                    input.value = '';
+                    alert(`✅ ${pointsChange > 0 ? '+' : ''}${pointsChange} punti applicati a ${user.username}!\n\n📊 Vecchio totale: ${currentPointsFromDB}\n💚 Nuovo totale: ${newPoints}`);
+                    
+                    // Ricarica la lista per mostrare i nuovi punti
+                    loadPointsUserList();
+                });
             });
-            
-            input.value = '';
-            alert(`${pointsChange > 0 ? '+' : ''}${pointsChange} punti applicati a ${user.username}. Nuovo totale: ${newPoints}`);
         }
         
         function loadPointsHistory() {

@@ -158,12 +158,25 @@
     </div>
 
     <!-- User Details Modal -->
-    <div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
-        <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
-            <div class="flex items-center justify-between mb-6">
-                <h3 class="text-xl font-bold">👤 Profilo</h3>
-                <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white">✕</button>
-            </div>
+<div id="userDetailsModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-gray-800 p-6 rounded-2xl max-w-2xl w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
+        <div class="flex items-center justify-between mb-6">
+            <h3 class="text-xl font-bold">👤 Profilo</h3>
+            <button onclick="closeUserDetails()" class="text-gray-400 hover:text-white text-2xl">✕</button>
+        </div>
+        
+        <!-- Tab Menu -->
+        <div class="flex gap-2 mb-6 border-b border-gray-700">
+            <button onclick="showProfileTab('info')" id="tabProfileInfo" class="px-4 py-2 border-b-2 border-green-500 text-green-400 font-semibold">
+                👤 Info
+            </button>
+            <button onclick="showProfileTab('giocate')" id="tabProfileGiocate" class="px-4 py-2 border-b-2 border-transparent text-gray-400 font-semibold hover:text-white">
+                🎲 Giocate
+            </button>
+        </div>
+        
+        <!-- Tab Info Profilo -->
+        <div id="profileInfoTab">
             <div class="flex flex-col items-center mb-6">
                 <div class="relative group">
                     <div id="userAvatar" class="w-24 h-24 bg-green-600 rounded-full flex items-center justify-center text-3xl font-bold overflow-hidden">
@@ -186,9 +199,36 @@
                 <div class="flex justify-between"><span class="text-gray-400">Biancoverdi Points:</span><span id="userPoints" class="font-medium text-green-400">0 💚</span></div>
                 <div class="flex justify-between"><span class="text-gray-400">Badge:</span><span id="userBadge" class="font-medium"></span></div>
             </div>
-            <button onclick="closeUserDetails()" class="w-full mt-6 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition">Chiudi</button>
         </div>
+        
+        <!-- Tab Giocate -->
+        <div id="profileGiocateTab" class="hidden">
+            <!-- Sotto-tab: Attive / Chiuse -->
+            <div class="flex gap-2 mb-4">
+                <button onclick="showGiocateSubTab('attive')" id="subTabAttive" class="flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold">
+                    ⏳ Attive
+                </button>
+                <button onclick="showGiocateSubTab('chiuse')" id="subTabChiuse" class="flex-1 px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold">
+                    📋 Chiuse
+                </button>
+            </div>
+            
+            <!-- Lista Giocate Attive -->
+            <div id="giocateAttiveList" class="space-y-3">
+                <!-- Verrà popolato dinamicamente -->
+            </div>
+            
+            <!-- Lista Giocate Chiuse -->
+            <div id="giocateChiuseList" class="space-y-3 hidden">
+                <!-- Verrà popolato dinamicamente -->
+            </div>
+            
+            <p id="noGiocate" class="text-gray-400 text-center py-8 hidden">Nessuna giocata trovata</p>
+        </div>
+        
+        <button onclick="closeUserDetails()" class="w-full mt-6 bg-gray-600 py-3 rounded-lg font-semibold hover:bg-gray-500 transition">Chiudi</button>
     </div>
+</div>
 
     <!-- Share Modal -->
     <div id="shareModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
@@ -476,29 +516,98 @@
         </div>
 
         <!-- Pronostici Page -->
-        <div id="pronosticiPage" class="hidden pt-20 pb-20">
-            <div class="container mx-auto px-4">
-                <h2 class="text-2xl md:text-3xl font-bold mb-6">🎯 Pronostici</h2>
-                
-                <!-- Tab Menu -->
-                <div class="flex gap-2 mb-6">
-                    <button onclick="showPronosticiTab('testaAtesta')" id="tabTestaAtesta" class="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold">⚔️ Testa a Testa</button>
-                    <button onclick="showPronosticiTab('giocatori')" id="tabGiocatori" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 font-semibold">👤 Giocatori</button>
+<div id="pronosticiPage" class="hidden pt-20 pb-20">
+    <div class="container mx-auto px-4">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-2xl md:text-3xl font-bold">🎯 Pronostici</h2>
+            <!-- Pulsante Carrello -->
+            <button onclick="toggleCarrello()" class="relative bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2">
+                🛒 Carrello
+                <span id="carrelloBadge" class="hidden absolute -top-2 -right-2 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">0</span>
+            </button>
+        </div>
+        
+        <!-- Tab Menu -->
+        <div class="flex gap-2 mb-6">
+            <button onclick="showPronosticiTab('testaAtesta')" id="tabTestaAtesta" class="px-4 py-2 rounded-lg bg-green-600 text-white font-semibold">⚔️ Testa a Testa</button>
+            <button onclick="showPronosticiTab('giocatori')" id="tabGiocatori" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 font-semibold">👤 Giocatori</button>
+        </div>
+        
+        <!-- Tab Testa a Testa -->
+        <div id="pronosticiTestaAtesta">
+            <div id="pronosticiList" class="space-y-4"></div>
+            <p id="emptyPronostici" class="text-gray-400 text-center py-20 hidden">Nessun pronostico attivo</p>
+        </div>
+        
+        <!-- Tab Giocatori Betting -->
+        <div id="pronosticiGiocatori" class="hidden">
+            <div id="bettingList" class="space-y-4"></div>
+            <p id="emptyBetting" class="text-gray-400 text-center py-20 hidden">Nessuna scommessa disponibile</p>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Carrello -->
+<div id="carrelloModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-gray-800 rounded-2xl max-w-md w-full border border-green-600/30 max-h-[90vh] overflow-y-auto">
+        <div class="sticky top-0 bg-gray-800 p-4 border-b border-gray-700 flex items-center justify-between">
+            <h3 class="text-xl font-bold">🛒 Carrello Scommesse</h3>
+            <button onclick="toggleCarrello()" class="text-gray-400 hover:text-white text-2xl">✕</button>
+        </div>
+        
+        <div id="carrelloContent" class="p-4">
+            <!-- Le scommesse verranno inserite qui -->
+        </div>
+        
+        <div id="carrelloFooter" class="sticky bottom-0 bg-gray-800 border-t border-gray-700 p-4">
+            <div class="mb-4">
+                <div class="flex justify-between text-sm mb-2">
+                    <span>Scommesse selezionate:</span>
+                    <span id="carrelloCount">0</span>
                 </div>
-                
-                <!-- Tab Testa a Testa -->
-                <div id="pronosticiTestaAtesta">
-                <div id="pronosticiList" class="space-y-4"></div>
-                <p id="emptyPronostici" class="text-gray-400 text-center py-20 hidden">Nessun pronostico attivo</p>
+                <div class="flex justify-between font-bold text-lg mb-2">
+                    <span>Quota totale:</span>
+                    <span id="carrelloQuota" class="text-green-400">1.00</span>
                 </div>
-                
-                <!-- Tab Giocatori Betting -->
-                <div id="pronosticiGiocatori" class="hidden">
-                    <div id="bettingList" class="space-y-4"></div>
-                    <p id="emptyBetting" class="text-gray-400 text-center py-20 hidden">Nessuna scommessa disponibile</p>
+                <div class="flex gap-2 items-center mb-3">
+                    <input type="number" id="carrelloImporto" placeholder="Importo (punti)" min="1" class="flex-1 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600">
+                    <span class="text-gray-400 text-sm">Vincita: <span id="carrelloVincita" class="text-green-400 font-bold">0</span></span>
                 </div>
             </div>
+            <div class="space-y-2">
+                <button onclick="piazzaMultipla()" id="btnMultipla" class="w-full bg-green-600 hover:bg-green-700 py-3 rounded-lg font-bold disabled:opacity-50 disabled:cursor-not-allowed">
+                    🎲 Gioca Multipla
+                </button>
+                <button onclick="svuotaCarrello()" class="w-full bg-red-600 hover:bg-red-700 py-2 rounded-lg font-semibold">
+                    🗑️ Svuota Carrello
+                </button>
+            </div>
         </div>
+    </div>
+</div>
+
+<!-- Modal Scontrino -->
+<div id="scontrinoModal" class="fixed inset-0 bg-black/90 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-white rounded-2xl max-w-sm w-full">
+        <div class="p-4 border-b border-gray-300 flex items-center justify-between bg-gray-100 rounded-t-2xl">
+    <h3 class="text-xl font-bold text-gray-800">🎫 Scontrino Scommessa</h3>
+    <button onclick="closeScontrino()" class="text-gray-600 hover:text-gray-800 text-2xl">✕</button>
+</div>
+        
+        <div id="scontrinoContent" class="p-6">
+            <!-- Lo scontrino verrà generato qui -->
+        </div>
+        
+        <div class="p-4 border-t border-gray-300 space-y-2 bg-gray-50 rounded-b-2xl">
+            <button onclick="salvaScontrino()" class="w-full bg-green-600 hover:bg-green-700 text-white py-3 rounded-lg font-bold">
+                📥 Salva in Galleria
+            </button>
+            <button onclick="condividiScontrino()" class="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-bold">
+                📤 Condividi
+            </button>
+        </div>
+    </div>
+</div>
 
         <!-- Classifica Page -->
         <div id="classificaPage" class="hidden pt-20 pb-20">
@@ -1016,6 +1125,24 @@
                     </div>
                 </div>
 
+                <!-- Giocate Multiple -->
+<div class="bg-gray-800 rounded-xl p-4 md:p-6 mt-6">
+    <h3 class="text-lg font-bold mb-4 flex items-center gap-2">
+        🎲 Giocate Multiple
+    </h3>
+    
+    <!-- Filtri -->
+    <div class="flex gap-2 mb-4">
+        <button onclick="filterMultiple('tutte')" id="filterTutte" class="px-4 py-2 rounded-lg bg-green-600 text-white text-sm">Tutte</button>
+        <button onclick="filterMultiple('attive')" id="filterAttive" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm">Attive</button>
+        <button onclick="filterMultiple('vinte')" id="filterVinte" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm">Vinte</button>
+        <button onclick="filterMultiple('perse')" id="filterPerse" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm">Perse</button>
+    </div>
+    
+    <div id="adminMultipleList" class="space-y-3"></div>
+    <p id="noAdminMultiple" class="text-gray-500 text-center py-4 hidden">Nessuna giocata multipla</p>
+</div>
+                
                 <!-- Users Tab -->
                 <div id="adminUsersTab" class="hidden">
                     <div class="bg-gray-800 rounded-xl p-4 md:p-6">
@@ -1400,7 +1527,15 @@
                                 <button onclick="placeBet('${b.id}', 'over')" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold">OVER</button>
                                 <button onclick="placeBet('${b.id}', 'under')" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm font-semibold">UNDER</button>
                             </div>
-                        ` : ''}
+                        <div class="grid grid-cols-2 gap-2 mt-2">
+    <button onclick="aggiungiAlCarrello('betting', '${b.id}', '${b.player} ${b.type}', 'OVER ${b.line}', ${b.quotaOver})" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1">
+        🛒 + OVER
+    </button>
+    <button onclick="aggiungiAlCarrello('betting', '${b.id}', '${b.player} ${b.type}', 'UNDER ${b.line}', ${b.quotaUnder})" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1">
+        🛒 + UNDER
+    </button>
+</div>
+                ` : ''}
                         
                         ${b.userBet ? `<p class="mt-3 text-sm text-green-400">✓ Hai scommesso ${b.userBet.amount} punti su ${b.userBet.choice.toUpperCase()}</p>` : ''}
                     </div>
@@ -1989,7 +2124,223 @@ function changePassword() {
         }
 
         // User Details
-        function showUserDetails() {
+        // ========== GESTIONE TAB PROFILO UTENTE ==========
+let currentProfileTab = 'info';
+let currentGiocateSubTab = 'attive';
+
+function showProfileTab(tab) {
+    currentProfileTab = tab;
+    
+    // Update tab buttons
+    document.getElementById('tabProfileInfo').className = tab === 'info' 
+        ? 'px-4 py-2 border-b-2 border-green-500 text-green-400 font-semibold'
+        : 'px-4 py-2 border-b-2 border-transparent text-gray-400 font-semibold hover:text-white';
+    
+    document.getElementById('tabProfileGiocate').className = tab === 'giocate'
+        ? 'px-4 py-2 border-b-2 border-green-500 text-green-400 font-semibold'
+        : 'px-4 py-2 border-b-2 border-transparent text-gray-400 font-semibold hover:text-white';
+    
+    // Show/hide content
+    document.getElementById('profileInfoTab').classList.toggle('hidden', tab !== 'info');
+    document.getElementById('profileGiocateTab').classList.toggle('hidden', tab !== 'giocate');
+    
+    if (tab === 'giocate') {
+        loadUserGiocate();
+    }
+}
+
+function showGiocateSubTab(subTab) {
+    currentGiocateSubTab = subTab;
+    
+    // Update sub-tab buttons
+    document.getElementById('subTabAttive').className = subTab === 'attive'
+        ? 'flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold'
+        : 'flex-1 px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold';
+    
+    document.getElementById('subTabChiuse').className = subTab === 'chiuse'
+        ? 'flex-1 px-4 py-2 rounded-lg bg-blue-600 text-white text-sm font-semibold'
+        : 'flex-1 px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold';
+    
+    // Show/hide lists
+    document.getElementById('giocateAttiveList').classList.toggle('hidden', subTab !== 'attive');
+    document.getElementById('giocateChiuseList').classList.toggle('hidden', subTab !== 'chiuse');
+}
+
+function loadUserGiocate() {
+    if (!currentUser) return;
+    
+    // Carica tutte le giocate multiple dell'utente
+    db.ref('giocateMultiple').orderByChild('userId').equalTo(currentUser.id).on('value', (snapshot) => {
+        const giocate = [];
+        snapshot.forEach(child => {
+            giocate.push({ id: child.key, ...child.val() });
+        });
+        
+        // Ordina per timestamp (più recenti prima)
+        giocate.sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+        
+        // Separa attive e chiuse
+        const attive = giocate.filter(g => g.stato === 'attiva');
+        const chiuse = giocate.filter(g => g.stato !== 'attiva');
+        
+        renderGiocateAttive(attive);
+        renderGiocateChiuse(chiuse);
+    });
+    
+    // Carica anche le scommesse singole
+    loadScommesseSingole();
+}
+
+function renderGiocateAttive(giocate) {
+    const container = document.getElementById('giocateAttiveList');
+    const noGiocate = document.getElementById('noGiocate');
+    
+    if (giocate.length === 0) {
+        container.innerHTML = '';
+        if (currentGiocateSubTab === 'attive') {
+            noGiocate.classList.remove('hidden');
+        }
+    } else {
+        if (currentGiocateSubTab === 'attive') {
+            noGiocate.classList.add('hidden');
+        }
+        
+        container.innerHTML = giocate.map(g => `
+            <div class="bg-gray-700 rounded-lg p-4 border-l-4 border-blue-500">
+                <div class="flex justify-between items-start mb-3">
+                    <div>
+                        <p class="font-bold font-mono text-lg">${g.codice}</p>
+                        <p class="text-xs text-gray-400">📅 ${g.data} ${g.ora}</p>
+                    </div>
+                    <span class="bg-blue-500 px-3 py-1 rounded-full text-xs font-semibold">⏳ In corso</span>
+                </div>
+                
+                <div class="bg-gray-800 rounded p-3 mb-3">
+                    <p class="text-xs text-gray-400 mb-2">🎲 Scommesse (${g.scommesse.length})</p>
+                    <div class="space-y-1">
+                        ${g.scommesse.map((s, i) => `
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-300">${i+1}. ${s.nome}</span>
+                                <span class="text-green-400 font-bold">${s.quota.toFixed(2)}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-3 gap-2 text-sm">
+                    <div class="bg-gray-800 rounded p-2 text-center">
+                        <p class="text-xs text-gray-400">Importo</p>
+                        <p class="font-bold text-green-400">${g.importo} 💚</p>
+                    </div>
+                    <div class="bg-gray-800 rounded p-2 text-center">
+                        <p class="text-xs text-gray-400">Quota</p>
+                        <p class="font-bold">${g.quotaTotale.toFixed(2)}</p>
+                    </div>
+                    <div class="bg-gray-800 rounded p-2 text-center">
+                        <p class="text-xs text-gray-400">Vincita</p>
+                        <p class="font-bold text-green-400">${g.vincitaPotenziale} 💚</p>
+                    </div>
+                </div>
+                
+                <button onclick="mostraScontrinoProfile('${g.id}')" class="w-full mt-3 bg-gray-600 hover:bg-gray-500 py-2 rounded-lg text-sm">
+                    🎫 Vedi Scontrino
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+function renderGiocateChiuse(giocate) {
+    const container = document.getElementById('giocateChiuseList');
+    const noGiocate = document.getElementById('noGiocate');
+    
+    if (giocate.length === 0) {
+        container.innerHTML = '';
+        if (currentGiocateSubTab === 'chiuse') {
+            noGiocate.classList.remove('hidden');
+        }
+    } else {
+        if (currentGiocateSubTab === 'chiuse') {
+            noGiocate.classList.add('hidden');
+        }
+        
+        container.innerHTML = giocate.map(g => {
+            const isVinta = g.stato === 'vinta';
+            const borderColor = isVinta ? 'border-green-500' : 'border-red-500';
+            const badge = isVinta 
+                ? '<span class="bg-green-500 px-3 py-1 rounded-full text-xs font-semibold">✅ Vinta</span>'
+                : '<span class="bg-red-500 px-3 py-1 rounded-full text-xs font-semibold">❌ Persa</span>';
+            
+            return `
+                <div class="bg-gray-700 rounded-lg p-4 border-l-4 ${borderColor}">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="font-bold font-mono text-lg">${g.codice}</p>
+                            <p class="text-xs text-gray-400">📅 ${g.data} ${g.ora}</p>
+                        </div>
+                        ${badge}
+                    </div>
+                    
+                    <div class="bg-gray-800 rounded p-3 mb-3">
+                        <p class="text-xs text-gray-400 mb-2">🎲 Scommesse (${g.scommesse.length})</p>
+                        <div class="space-y-1">
+                            ${g.scommesse.map((s, i) => `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-300">${i+1}. ${s.nome}</span>
+                                    <span class="text-green-400 font-bold">${s.quota.toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    <div class="grid grid-cols-3 gap-2 text-sm mb-3">
+                        <div class="bg-gray-800 rounded p-2 text-center">
+                            <p class="text-xs text-gray-400">Importo</p>
+                            <p class="font-bold ${isVinta ? 'text-gray-400' : 'text-red-400'}">${g.importo} 💚</p>
+                        </div>
+                        <div class="bg-gray-800 rounded p-2 text-center">
+                            <p class="text-xs text-gray-400">Quota</p>
+                            <p class="font-bold">${g.quotaTotale.toFixed(2)}</p>
+                        </div>
+                        <div class="bg-gray-800 rounded p-2 text-center">
+                            <p class="text-xs text-gray-400">${isVinta ? 'Vinto' : 'Perso'}</p>
+                            <p class="font-bold ${isVinta ? 'text-green-400' : 'text-red-400'}">${isVinta ? '+' : '-'}${isVinta ? g.vincitaPotenziale : g.importo} 💚</p>
+                        </div>
+                    </div>
+                    
+                    ${isVinta ? `
+                        <div class="bg-green-600/20 border border-green-600 rounded p-2 text-center mb-2">
+                            <p class="text-green-400 text-sm">🎉 Hai vinto ${g.vincitaPotenziale} punti!</p>
+                        </div>
+                    ` : `
+                        <div class="bg-red-600/20 border border-red-600 rounded p-2 text-center mb-2">
+                            <p class="text-red-400 text-sm">💔 Giocata persa</p>
+                        </div>
+                    `}
+                    
+                    <button onclick="mostraScontrinoProfile('${g.id}')" class="w-full bg-gray-600 hover:bg-gray-500 py-2 rounded-lg text-sm">
+                        🎫 Vedi Scontrino
+                    </button>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+function loadScommesseSingole() {
+    // TODO: Carica anche le scommesse singole (non multiple)
+    // Puoi implementare questa funzione se vuoi mostrare anche le singole
+}
+
+function mostraScontrinoProfile(giocataId) {
+    db.ref('giocateMultiple/' + giocataId).once('value', (snapshot) => {
+        const giocata = snapshot.val();
+        if (giocata) {
+            mostraScontrino({ ...giocata, id: giocataId });
+        }
+    });
+}
+    function showUserDetails() {
             const avatarImg = document.getElementById('userAvatarImg');
             const avatarInitial = document.getElementById('userAvatarInitial');
             const removeBtn = document.getElementById('removePhotoBtn');
@@ -2012,7 +2363,8 @@ function changePassword() {
             document.getElementById('userDate').textContent = currentUser.date;
             document.getElementById('userPoints').textContent = (currentUser.points || 0) + ' 💚';
             document.getElementById('userBadge').textContent = getBadge(currentUser.points || 0);
-            document.getElementById('userDetailsModal').classList.remove('hidden');
+            showProfileTab('info');
+        document.getElementById('userDetailsModal').classList.remove('hidden');
         }
 
         function closeUserDetails() {
@@ -2927,22 +3279,33 @@ function sendLiveChat() {
                             </div>
                             
                             ${userBet ? `
-                                <div class="bg-green-600/20 border border-green-600 rounded-lg p-3 text-center">
-                                    <p class="text-green-400">✓ Hai scommesso ${userBet.amount} punti su ${userBet.team}</p>
-                                    <p class="text-sm text-gray-400">Vincita potenziale: ${Math.floor(userBet.amount * userBet.quota)} punti</p>
-                                </div>
-                            ` : p.closed ? `
-                                <div class="bg-yellow-600/20 border border-yellow-600 rounded-lg p-3 text-center">
-                                    <p class="text-yellow-400">🔒 Scommesse chiuse</p>
-                                    <p class="text-sm text-gray-400">La partita sta per iniziare</p>
-                                </div>
-                            ` : `
-                                <div class="flex gap-2 items-center">
-                                    <input type="number" id="pronoAmount_${p.id}" placeholder="Punti" min="1" class="flex-1 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 text-sm">
-                                    <button onclick="placePronoBet('${p.id}', 1, '${p.team1}', ${quota1})" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold">${p.team1}</button>
-                                    <button onclick="placePronoBet('${p.id}', 2, '${p.team2}', ${quota2})" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm font-semibold">${p.team2}</button>
-                                </div>
-                            `}
+    <div class="bg-green-600/20 border border-green-600 rounded-lg p-3 text-center">
+        <p class="text-green-400">✓ Hai scommesso ${userBet.amount > 0 ? userBet.amount + ' punti' : 'in multipla'} su ${userBet.team}</p>
+        ${userBet.amount > 0 ? `<p class="text-sm text-gray-400">Vincita potenziale: ${Math.floor(userBet.amount * userBet.quota)} punti</p>` : ''}
+        ${userBet.codiceMultipla ? `<p class="text-xs text-gray-500 mt-1">Codice: ${userBet.codiceMultipla}</p>` : ''}
+    </div>
+` : p.closed ? `
+    <div class="bg-yellow-600/20 border border-yellow-600 rounded-lg p-3 text-center">
+        <p class="text-yellow-400">🔒 Scommesse chiuse</p>
+        <p class="text-sm text-gray-400">La partita sta per iniziare</p>
+    </div>
+` : `
+    <div class="space-y-2">
+        <div class="flex gap-2 items-center">
+            <input type="number" id="pronoAmount_${p.id}" placeholder="Punti" min="1" class="flex-1 bg-gray-700 px-4 py-2 rounded-lg border border-gray-600 text-sm">
+            <button onclick="placePronoBet('${p.id}', 1, '${p.team1}', ${quota1})" class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-sm font-semibold">${p.team1}</button>
+            <button onclick="placePronoBet('${p.id}', 2, '${p.team2}', ${quota2})" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm font-semibold">${p.team2}</button>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+            <button onclick="aggiungiAlCarrello('prono', '${p.id}', '${p.team1} vs ${p.team2}', 'Vince ${p.team1}', ${quota1})" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1">
+                🛒 + ${p.team1}
+            </button>
+            <button onclick="aggiungiAlCarrello('prono', '${p.id}', '${p.team1} vs ${p.team2}', 'Vince ${p.team2}', ${quota2})" class="bg-gray-700 hover:bg-gray-600 px-3 py-2 rounded-lg text-xs flex items-center justify-center gap-1">
+                🛒 + ${p.team2}
+            </button>
+        </div>
+    </div>
+`}
                         </div>
                     `;
                 }).join('');
@@ -3091,6 +3454,7 @@ function sendLiveChat() {
             loadAdminVideoList();
             loadAdminNewsList();
             loadAdminPronosticiList();
+            loadAdminMultiple();
             loadMembersList();
             updateAdminStats();
         }
@@ -4785,6 +5149,541 @@ function deletePronostico(id) {
         initFirebase();
         loadSponsors();
         loadCampionati();
+    
+   // ========== SISTEMA CARRELLO SCOMMESSE ==========
+let carrelloScommesse = [];
+
+function aggiungiAlCarrello(tipo, id, nome, scelta, quota) {
+    // Controlla se già presente
+    const exists = carrelloScommesse.find(s => s.id === id && s.tipo === tipo);
+    if (exists) {
+        alert('Questa scommessa è già nel carrello!');
+        return;
+    }
+    
+    carrelloScommesse.push({
+        tipo, // 'prono' o 'betting'
+        id,
+        nome,
+        scelta,
+        quota: parseFloat(quota)
+    });
+    
+    updateCarrelloBadge();
+    alert(`✅ "${nome}" aggiunto al carrello!`);
+}
+
+function rimuoviDalCarrello(index) {
+    carrelloScommesse.splice(index, 1);
+    updateCarrelloBadge();
+    renderCarrello();
+}
+
+function updateCarrelloBadge() {
+    const badge = document.getElementById('carrelloBadge');
+    const count = carrelloScommesse.length;
+    
+    if (count > 0) {
+        badge.textContent = count;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+function toggleCarrello() {
+    const modal = document.getElementById('carrelloModal');
+    const isHidden = modal.classList.contains('hidden');
+    
+    if (isHidden) {
+        modal.classList.remove('hidden');
+        renderCarrello();
+    } else {
+        modal.classList.add('hidden');
+    }
+}
+
+function renderCarrello() {
+    const container = document.getElementById('carrelloContent');
+    const countEl = document.getElementById('carrelloCount');
+    const quotaEl = document.getElementById('carrelloQuota');
+    const vincitaEl = document.getElementById('carrelloVincita');
+    const importoInput = document.getElementById('carrelloImporto');
+    const btnMultipla = document.getElementById('btnMultipla');
+    
+    if (carrelloScommesse.length === 0) {
+        container.innerHTML = '<p class="text-gray-400 text-center py-8">Il carrello è vuoto</p>';
+        btnMultipla.disabled = true;
+        countEl.textContent = '0';
+        quotaEl.textContent = '1.00';
+        vincitaEl.textContent = '0';
+        return;
+    }
+    
+    // Calcola quota totale
+    const quotaTotale = carrelloScommesse.reduce((acc, s) => acc * s.quota, 1);
+    
+    container.innerHTML = carrelloScommesse.map((s, i) => `
+        <div class="bg-gray-700 rounded-lg p-3 mb-2">
+            <div class="flex justify-between items-start">
+                <div class="flex-1">
+                    <p class="font-semibold text-sm">${s.nome}</p>
+                    <p class="text-xs text-gray-400">${s.scelta}</p>
+                    <p class="text-green-400 font-bold mt-1">Quota: ${s.quota.toFixed(2)}</p>
+                </div>
+                <button onclick="rimuoviDalCarrello(${i})" class="text-red-400 hover:text-red-300 ml-2">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                </button>
+            </div>
+        </div>
+    `).join('');
+    
+    countEl.textContent = carrelloScommesse.length;
+    quotaEl.textContent = quotaTotale.toFixed(2);
+    
+    // Calcola vincita potenziale
+    const importo = parseInt(importoInput.value) || 0;
+    const vincita = Math.floor(importo * quotaTotale);
+    vincitaEl.textContent = vincita;
+    
+    btnMultipla.disabled = false;
+}
+
+// Update vincita quando cambia importo
+document.addEventListener('DOMContentLoaded', function() {
+    const importoInput = document.getElementById('carrelloImporto');
+    if (importoInput) {
+        importoInput.addEventListener('input', function() {
+            const quotaTotale = carrelloScommesse.reduce((acc, s) => acc * s.quota, 1);
+            const importo = parseInt(this.value) || 0;
+            const vincita = Math.floor(importo * quotaTotale);
+            document.getElementById('carrelloVincita').textContent = vincita;
+        });
+    }
+});
+
+function svuotaCarrello() {
+    if (!confirm('Svuotare il carrello?')) return;
+    carrelloScommesse = [];
+    updateCarrelloBadge();
+    renderCarrello();
+}
+
+function generaCodiceGiocata() {
+    const timestamp = Date.now();
+    const random = Math.random().toString(36).substring(2, 8).toUpperCase();
+    return `BV${timestamp.toString().slice(-6)}${random}`;
+}
+
+function piazzaMultipla() {
+    if (carrelloScommesse.length === 0) {
+        alert('Il carrello è vuoto!');
+        return;
+    }
+    
+    const importo = parseInt(document.getElementById('carrelloImporto').value);
+    
+    if (!importo || importo < 1) {
+        alert('Inserisci un importo valido!');
+        return;
+    }
+    
+    if (importo > (currentUser.points || 0)) {
+        alert('Non hai abbastanza Biancoverdi Points!');
+        return;
+    }
+    
+    const quotaTotale = carrelloScommesse.reduce((acc, s) => acc * s.quota, 1);
+    const vincitaPotenziale = Math.floor(importo * quotaTotale);
+    
+    if (!confirm(`Confermi la giocata?\n\n💰 Importo: ${importo} punti\n📊 Quota totale: ${quotaTotale.toFixed(2)}\n🎯 Vincita potenziale: ${vincitaPotenziale} punti\n🎲 Scommesse: ${carrelloScommesse.length}`)) {
+        return;
+    }
+    
+    // Genera codice univoco
+    const codiceGiocata = generaCodiceGiocata();
+    
+    // Scala punti
+    currentUser.points -= importo;
+    db.ref('users/' + currentUser.id).update({ points: currentUser.points });
+    localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+    
+    // Salva la giocata multipla
+    const giocataData = {
+        userId: currentUser.id,
+        username: currentUser.username,
+        codice: codiceGiocata,
+        importo,
+        quotaTotale,
+        vincitaPotenziale,
+        scommesse: carrelloScommesse.map(s => ({...s})),
+        data: new Date().toLocaleDateString('it-IT'),
+        ora: new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'}),
+        timestamp: Date.now(),
+        stato: 'attiva' // attiva, vinta, persa
+    };
+    
+    db.ref('giocateMultiple').push().set(giocataData);
+    
+    // Salva riferimento nelle scommesse singole
+    carrelloScommesse.forEach(s => {
+        if (s.tipo === 'prono') {
+            const bets = pronosticiCache.find(p => p.id === s.id)?.bets || {};
+            if (!bets[currentUser.id]) {
+                bets[currentUser.id] = {
+                    team: s.scelta.split(' ').pop(), // Estrai nome squadra
+                    teamNum: s.scelta.includes('1') ? 1 : 2,
+                    amount: 0, // In multipla non conta l'importo singolo
+                    quota: s.quota,
+                    codiceMultipla: codiceGiocata
+                };
+                db.ref('pronostici/' + s.id).update({ bets });
+            }
+        } else if (s.tipo === 'betting') {
+            const bets = bettingCache.find(b => b.id === s.id)?.bets || {};
+            if (!bets[currentUser.id]) {
+                bets[currentUser.id] = {
+                    choice: s.scelta.toLowerCase(),
+                    amount: 0,
+                    quota: s.quota,
+                    codiceMultipla: codiceGiocata
+                };
+                db.ref('betting/' + s.id).update({ bets });
+            }
+        }
+    });
+    
+    // Mostra scontrino
+    mostraScontrino(giocataData);
+    
+    // Svuota carrello
+    carrelloScommesse = [];
+    updateCarrelloBadge();
+    toggleCarrello();
+}
+
+function mostraScontrino(giocata) {
+    const container = document.getElementById('scontrinoContent');
+    
+    const html = `
+        <div id="scontrinoPrint" class="bg-white text-gray-800">
+            <!-- Header -->
+            <div class="text-center border-b-2 border-dashed border-gray-400 pb-4 mb-4">
+                <div class="text-4xl mb-2">🏀</div>
+                <h2 class="text-xl font-bold">CESTISTICA TV</h2>
+                <p class="text-sm text-gray-600">Scommesse Sportive</p>
+            </div>
+            
+            <!-- Codice Giocata -->
+            <div class="bg-gray-100 rounded-lg p-3 mb-4 text-center">
+                <p class="text-xs text-gray-600 mb-1">CODICE GIOCATA</p>
+                <p class="text-2xl font-bold font-mono tracking-wider">${giocata.codice}</p>
+            </div>
+            
+            <!-- Info Giocata -->
+            <div class="space-y-2 mb-4 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Data:</span>
+                    <span class="font-semibold">${giocata.data} ${giocata.ora}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Giocatore:</span>
+                    <span class="font-semibold">${giocata.username}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Tipo:</span>
+                    <span class="font-semibold">MULTIPLA</span>
+                </div>
+            </div>
+            
+            <!-- Scommesse -->
+            <div class="border-t-2 border-dashed border-gray-400 pt-4 mb-4">
+                <h3 class="font-bold mb-3 text-center">📋 SCOMMESSE</h3>
+                <div class="space-y-3">
+                    ${giocata.scommesse.map((s, i) => `
+                        <div class="bg-gray-50 rounded p-2">
+                            <div class="flex justify-between items-start mb-1">
+                                <span class="text-xs font-bold text-gray-600">${i + 1}.</span>
+                                <span class="flex-1 mx-2 text-sm font-semibold">${s.nome}</span>
+                                <span class="text-green-600 font-bold">${s.quota.toFixed(2)}</span>
+                            </div>
+                            <p class="text-xs text-gray-600 ml-4">${s.scelta}</p>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+            
+            <!-- Totali -->
+            <div class="border-t-2 border-dashed border-gray-400 pt-4 space-y-2 text-sm">
+                <div class="flex justify-between">
+                    <span class="text-gray-600">N° Scommesse:</span>
+                    <span class="font-bold">${giocata.scommesse.length}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Importo:</span>
+                    <span class="font-bold">${giocata.importo} 💚</span>
+                </div>
+                <div class="flex justify-between">
+                    <span class="text-gray-600">Quota Totale:</span>
+                    <span class="font-bold text-green-600">${giocata.quotaTotale.toFixed(2)}</span>
+                </div>
+                <div class="flex justify-between text-lg pt-2 border-t border-gray-300">
+                    <span class="font-bold">Vincita Potenziale:</span>
+                    <span class="font-bold text-green-600">${giocata.vincitaPotenziale} 💚</span>
+                </div>
+            </div>
+            
+            <!-- Footer -->
+            <div class="text-center mt-6 pt-4 border-t-2 border-dashed border-gray-400 text-xs text-gray-500">
+                <p>Conserva questo scontrino</p>
+                <p class="mt-1">🍀 In bocca al lupo! 🍀</p>
+                <p class="mt-2 font-mono">${giocata.data} - ${giocata.ora}</p>
+            </div>
+        </div>
+    `;
+    
+    container.innerHTML = html;
+    document.getElementById('scontrinoModal').classList.remove('hidden');
+}
+
+function closeScontrino() {
+    document.getElementById('scontrinoModal').classList.add('hidden');
+}
+
+function salvaScontrino() {
+    const scontrino = document.getElementById('scontrinoPrint');
+    
+    html2canvas(scontrino, {
+        scale: 3,
+        backgroundColor: '#ffffff',
+        logging: false
+    }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = `scontrino-${Date.now()}.png`;
+        link.href = canvas.toDataURL();
+        link.click();
+        alert('✅ Scontrino salvato in galleria!');
+    });
+}
+
+function condividiScontrino() {
+    const scontrino = document.getElementById('scontrinoPrint');
+    
+    html2canvas(scontrino, {
+        scale: 3,
+        backgroundColor: '#ffffff',
+        logging: false
+    }).then(canvas => {
+        canvas.toBlob(blob => {
+            if (navigator.share) {
+                const file = new File([blob], 'scontrino.png', { type: 'image/png' });
+                navigator.share({
+                    title: 'Il mio scontrino Cestistica TV',
+                    text: 'Guarda la mia giocata!',
+                    files: [file]
+                }).catch(err => console.log('Errore condivisione:', err));
+            } else {
+                // Fallback: copia link
+                const url = URL.createObjectURL(blob);
+                window.open(url, '_blank');
+            }
+        });
+    });
+} 
+    
+ // ========== GESTIONE ADMIN MULTIPLE ==========
+let multipleCache = [];
+let currentMultipleFilter = 'tutte';
+
+function loadAdminMultiple() {
+    db.ref('giocateMultiple').orderByChild('timestamp').on('value', (snapshot) => {
+        multipleCache = [];
+        snapshot.forEach(child => {
+            multipleCache.push({ id: child.key, ...child.val() });
+        });
+        multipleCache.reverse(); // Più recenti prima
+        renderAdminMultiple();
+    });
+}
+
+function filterMultiple(filtro) {
+    currentMultipleFilter = filtro;
+    
+    // Update pulsanti
+    ['Tutte', 'Attive', 'Vinte', 'Perse'].forEach(f => {
+        const btn = document.getElementById('filter' + f);
+        if (btn) {
+            if (f.toLowerCase() === filtro) {
+                btn.className = 'px-4 py-2 rounded-lg bg-green-600 text-white text-sm';
+            } else {
+                btn.className = 'px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm';
+            }
+        }
+    });
+    
+    renderAdminMultiple();
+}
+
+function renderAdminMultiple() {
+    const container = document.getElementById('adminMultipleList');
+    const noMultiple = document.getElementById('noAdminMultiple');
+    
+    if (!container) return;
+    
+    // Filtra in base allo stato
+    let filtered = multipleCache;
+    if (currentMultipleFilter !== 'tutte') {
+        if (currentMultipleFilter === 'attive') {
+            filtered = multipleCache.filter(m => m.stato === 'attiva');
+        } else if (currentMultipleFilter === 'vinte') {
+            filtered = multipleCache.filter(m => m.stato === 'vinta');
+        } else if (currentMultipleFilter === 'perse') {
+            filtered = multipleCache.filter(m => m.stato === 'persa');
+        }
+    }
+    
+    if (filtered.length === 0) {
+        container.innerHTML = '';
+        if (noMultiple) noMultiple.classList.remove('hidden');
+    } else {
+        if (noMultiple) noMultiple.classList.add('hidden');
+        container.innerHTML = filtered.map(m => {
+            const statoBadge = m.stato === 'attiva' 
+                ? '<span class="bg-blue-500 px-2 py-1 rounded text-xs">⏳ Attiva</span>'
+                : m.stato === 'vinta'
+                ? '<span class="bg-green-500 px-2 py-1 rounded text-xs">✅ Vinta</span>'
+                : '<span class="bg-red-500 px-2 py-1 rounded text-xs">❌ Persa</span>';
+            
+            return `
+                <div class="bg-gray-700 rounded-lg p-4">
+                    <div class="flex justify-between items-start mb-3">
+                        <div>
+                            <p class="font-bold text-lg font-mono">${m.codice}</p>
+                            <p class="text-sm text-gray-400">👤 ${m.username}</p>
+                            <p class="text-xs text-gray-500">📅 ${m.data} ${m.ora}</p>
+                        </div>
+                        <div class="text-right">
+                            ${statoBadge}
+                            <p class="text-sm text-gray-400 mt-1">💰 ${m.importo} punti</p>
+                            <p class="text-sm text-green-400">📊 Quota: ${m.quotaTotale.toFixed(2)}</p>
+                            <p class="text-sm font-bold text-green-400">🎯 Vincita: ${m.vincitaPotenziale} punti</p>
+                        </div>
+                    </div>
+                    
+                    <!-- Scommesse nella multipla -->
+                    <div class="bg-gray-800 rounded p-3 mb-3">
+                        <p class="text-xs text-gray-400 mb-2">🎲 Scommesse (${m.scommesse.length})</p>
+                        <div class="space-y-2">
+                            ${m.scommesse.map((s, i) => `
+                                <div class="flex justify-between text-sm">
+                                    <span class="text-gray-300">${i+1}. ${s.nome}</span>
+                                    <span class="text-gray-400">${s.scelta}</span>
+                                    <span class="text-green-400 font-bold">${s.quota.toFixed(2)}</span>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                    
+                    ${m.stato === 'attiva' ? `
+                        <div class="flex gap-2">
+                            <button onclick="risolviMultipla('${m.id}', 'vinta')" class="flex-1 bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-semibold">
+                                ✅ Segna come VINTA
+                            </button>
+                            <button onclick="risolviMultipla('${m.id}', 'persa')" class="flex-1 bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-semibold">
+                                ❌ Segna come PERSA
+                            </button>
+                        </div>
+                    ` : m.stato === 'vinta' ? `
+                        <div class="bg-green-600/20 border border-green-600 rounded p-2 text-center">
+                            <p class="text-green-400 text-sm">🎉 Vincita di ${m.vincitaPotenziale} punti pagata!</p>
+                        </div>
+                    ` : `
+                        <div class="bg-red-600/20 border border-red-600 rounded p-2 text-center">
+                            <p class="text-red-400 text-sm">💔 Giocata persa</p>
+                        </div>
+                    `}
+                    
+                    ${m.stato !== 'attiva' ? `
+                        <button onclick="eliminaMultipla('${m.id}')" class="w-full mt-2 bg-gray-600 hover:bg-gray-500 px-4 py-2 rounded-lg text-xs">
+                            🗑️ Elimina
+                        </button>
+                    ` : ''}
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+function risolviMultipla(multiplaId, risultato) {
+    const multipla = multipleCache.find(m => m.id === multiplaId);
+    if (!multipla) return;
+    
+    const conferma = risultato === 'vinta'
+        ? `✅ Segnare la multipla ${multipla.codice} come VINTA?\n\n💰 Verranno pagati ${multipla.vincitaPotenziale} punti a ${multipla.username}`
+        : `❌ Segnare la multipla ${multipla.codice} come PERSA?\n\n${multipla.username} perderà la scommessa di ${multipla.importo} punti`;
+    
+    if (!confirm(conferma)) return;
+    
+    // Aggiorna stato multipla
+    db.ref('giocateMultiple/' + multiplaId).update({ 
+        stato: risultato,
+        risoluzioneDa: currentUser.username,
+        risoluzionData: new Date().toLocaleDateString('it-IT'),
+        risoluzionOra: new Date().toLocaleTimeString('it-IT', {hour: '2-digit', minute: '2-digit'})
+    });
+    
+    if (risultato === 'vinta') {
+        // Paga la vincita
+        db.ref('users/' + multipla.userId + '/points').once('value', (snapshot) => {
+            const currentPoints = snapshot.val() || 0;
+            const newPoints = currentPoints + multipla.vincitaPotenziale;
+            db.ref('users/' + multipla.userId).update({ points: newPoints });
+            
+            // Aggiorna cache locale se è l'utente corrente
+            if (currentUser && currentUser.id === multipla.userId) {
+                currentUser.points = newPoints;
+                localStorage.setItem('cesticaUser', JSON.stringify(currentUser));
+            }
+            
+            // Aggiorna usersCache
+            const userIndex = usersCache.findIndex(u => u.id === multipla.userId);
+            if (userIndex !== -1) {
+                usersCache[userIndex].points = newPoints;
+            }
+            
+            // Invia notifica
+            db.ref('notifications/' + multipla.userId).push({
+                type: 'win',
+                message: `🎉 MULTIPLA VINTA! Hai vinto ${multipla.vincitaPotenziale} punti! Codice: ${multipla.codice}`,
+                date: Date.now(),
+                read: false
+            });
+        });
+        
+        alert(`✅ Multipla segnata come VINTA!\n💰 ${multipla.vincitaPotenziale} punti pagati a ${multipla.username}`);
+    } else {
+        // Invia notifica di sconfitta
+        db.ref('notifications/' + multipla.userId).push({
+            type: 'loss',
+            message: `😔 Multipla persa. Codice: ${multipla.codice}`,
+            date: Date.now(),
+            read: false
+        });
+        
+        alert(`❌ Multipla segnata come PERSA.`);
+    }
+}
+
+function eliminaMultipla(multiplaId) {
+    const multipla = multipleCache.find(m => m.id === multiplaId);
+    if (!multipla) return;
+    
+    if (!confirm(`🗑️ Eliminare definitivamente la multipla ${multipla.codice}?`)) return;
+    
+    db.ref('giocateMultiple/' + multiplaId).remove();
+    alert('Multipla eliminata!');
+}   
+    
     </script>
 </body>
 </html>

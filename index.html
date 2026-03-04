@@ -147,7 +147,8 @@
             <button onclick="showSocialWall(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">📸 Social</button>
             <button onclick="showGames(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎮 Games</button>
             <button onclick="showRoster(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👥 Roster</button>
-            <button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">❤️ La Mia Lista</button>
+            <button onclick="showStore(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🛍️ Store</button>
+<button onclick="showWatchlist(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">❤️ La Mia Lista</button>
             <hr class="border-gray-700 my-4">
             <button onclick="showUserDetails(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">👤 Profilo</button>
             <button onclick="showBiancoverdiCard(); closeMobileMenu();" class="w-full text-left py-3 px-4 rounded-lg hover:bg-gray-700 transition flex items-center gap-3">🎫 Biancoverdi Card</button>
@@ -315,7 +316,8 @@
                     <button onclick="showSocialWall()" class="hover:text-green-400 transition">Social</button>
                     <button onclick="showGames()" class="hover:text-green-400 transition">Games</button>
                     <button onclick="showRoster()" class="hover:text-green-400 transition">Roster</button>
-                    <button onclick="showWatchlist()" class="hover:text-green-400 transition">La Mia Lista</button>
+                    <button onclick="showStore()" class="hover:text-green-400 transition">Store</button>
+<button onclick="showWatchlist()" class="hover:text-green-400 transition">La Mia Lista</button>
                 </nav>
                 
                 <div class="flex items-center gap-2 md:gap-4">
@@ -813,7 +815,32 @@
             </div>
         </div>
 
-        <!-- Games Page -->
+        <!-- Store Page -->
+<div id="storePage" class="hidden pt-16 pb-0">
+    <div class="container mx-auto px-4">
+        <div class="flex items-center justify-between mb-6">
+            <h2 class="text-2xl md:text-3xl font-bold">🛍️ Store Ufficiale</h2>
+            <a href="https://cestisticasavonese.sumupstore.com/" target="_blank" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                Apri in nuova finestra
+            </a>
+        </div>
+    </div>
+    
+    <!-- Store iframe -->
+    <div class="w-full" style="height: calc(100vh - 140px);">
+        <iframe 
+            id="storeIframe"
+            src="https://cestisticasavonese.sumupstore.com/" 
+            class="w-full h-full border-0"
+            title="Store Cestistica Savonese"
+            loading="lazy"
+            allow="payment"
+        ></iframe>
+    </div>
+</div>
+
+<!-- Games Page -->
         <div id="gamesPage" class="hidden pt-20 pb-20">
             <div class="container mx-auto px-4">
                 <h2 class="text-2xl md:text-3xl font-bold mb-6">🎮 Games</h2>
@@ -3418,13 +3445,17 @@ function sendLiveChat() {
         }
 
         function hideAllPages() {
-            ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage', 'socialWallPage', 'gamesPage', 'rosterPage'].forEach(id => {
-                const el = document.getElementById(id);
-                if (el) el.classList.add('hidden');
-            });
-            const player = document.getElementById('videoPlayer');
-            if (player) player.src = '';
-        }
+    ['homeContent', 'videoPage', 'watchlistPage', 'adminPage', 'newsPage', 'newsArticlePage', 'calendarPage', 'pronosticiPage', 'classificaPage', 'biancoverdiCardPage', 'socialWallPage', 'gamesPage', 'rosterPage', 'storePage'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.classList.add('hidden');
+    });
+    
+    // Ripristina lo scroll quando si esce dallo store
+    document.body.style.overflow = 'auto';
+    
+    const player = document.getElementById('videoPlayer');
+    if (player) player.src = '';
+}
 
         function showHome() {
             hideAllPages();
@@ -4864,7 +4895,15 @@ function deletePronostico(id) {
     });
 }
         
-        function loadAdminRoster() {
+     function showStore() {
+    hideAllPages();
+    document.getElementById('storePage').classList.remove('hidden');
+    
+    // Nascondi lo scroll della pagina principale quando lo store è aperto
+    document.body.style.overflow = 'hidden';
+}   
+
+function loadAdminRoster() {
     const settore = document.getElementById('adminRosterSettore')?.value || 'maschile';
     const campionato = document.getElementById('adminRosterCampionato')?.value;
     if (!campionato) return;

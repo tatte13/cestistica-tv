@@ -816,27 +816,109 @@
         </div>
 
         <!-- Store Page -->
-<div id="storePage" class="hidden pt-16 pb-0">
+<div id="storePage" class="hidden pt-20 pb-20">
     <div class="container mx-auto px-4">
-        <div class="flex items-center justify-between mb-6">
-            <h2 class="text-2xl md:text-3xl font-bold">🛍️ Store Ufficiale</h2>
-            <a href="https://cestisticasavonese.sumupstore.com/" target="_blank" class="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center gap-2 text-sm">
-                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
-                Apri in nuova finestra
+        <!-- Header Store -->
+        <div class="text-center mb-12">
+            <h2 class="text-3xl md:text-5xl font-bold mb-4">🛍️ Store Ufficiale</h2>
+            <p class="text-xl text-gray-400 mb-8">Magliette, felpe, accessori e molto altro. Sostieni la squadra biancoverde!</p>
+            
+            <!-- Pulsante principale -->
+            <a href="https://cestisticasavonese.sumupstore.com/" target="_blank" rel="noopener noreferrer" class="inline-block gradient-bg text-white px-12 py-5 rounded-2xl font-bold text-xl hover:opacity-90 transition shadow-2xl">
+                🛒 Visita lo Store
+                <svg class="w-6 h-6 inline-block ml-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
             </a>
         </div>
-    </div>
-    
-    <!-- Store iframe -->
-    <div class="w-full" style="height: calc(100vh - 140px);">
-        <iframe 
-            id="storeIframe"
-            src="https://cestisticasavonese.sumupstore.com/" 
-            class="w-full h-full border-0"
-            title="Store Cestistica Savonese"
-            loading="lazy"
-            allow="payment"
-        ></iframe>
+        
+        <!-- Grid Categorie Prodotti -->
+        <div class="grid md:grid-cols-3 gap-6 mb-12">
+            <!-- Magliette -->
+            <div class="bg-gray-800 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer" onclick="window.open('https://cestisticasavonese.sumupstore.com/', '_blank')">
+                <div class="aspect-square bg-gradient-to-br from-green-600 to-green-800 flex items-center justify-center text-8xl">
+                    👕
+                </div>
+                <div class="p-6">
+                    <h3 class="text-xl font-bold mb-2">Magliette</h3>
+                    <p class="text-gray-400 text-sm mb-4">Magliette ufficiali della squadra, disponibili in varie taglie</p>
+                    <span class="text-green-400 font-semibold">Scopri di più →</span>
+                </div>
+            </div>
+            
+            <!-- Felpe -->
+            <div class="bg-gray-800 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer" onclick="window.open('https://cestisticasavonese.sumupstore.com/', '_blank')">
+                <div class="aspect-square bg-gradient-to-br from-green-700 to-green-900 flex items-center justify-center text-8xl">
+                    🧥
+                </div>
+                <div class="p-6">
+                    <h3 class="text-xl font-bold mb-2">Felpe</h3>
+                    <p class="text-gray-400 text-sm mb-4">Felpe e tute della Cestistica Savonese per ogni stagione</p>
+                    <span class="text-green-400 font-semibold">Scopri di più →</span>
+                </div>
+            </div>
+            
+            <!-- Accessori -->
+            <div class="bg-gray-800 rounded-xl overflow-hidden hover:scale-105 transition cursor-pointer" onclick="window.open('https://cestisticasavonese.sumupstore.com/', '_blank')">
+                <div class="aspect-square bg-gradient-to-br from-green-800 to-black flex items-center justify-center text-8xl">
+                    🎒
+                </div>
+                <div class="p-6">
+                    <h3 class="text-xl font-bold mb-2">Accessori</h3>
+                    <p class="text-gray-400 text-sm mb-4">Cappellini, zaini, borracce e gadget ufficiali</p>
+                    <span class="text-green-400 font-semibold">Scopri di più →</span>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Info Banner -->
+        <div class="grid md:grid-cols-2 gap-6 mb-12">
+            <div class="bg-gradient-to-r from-green-600 to-green-700 rounded-xl p-6 flex items-center gap-4">
+                <div class="text-4xl">🚚</div>
+                <div>
+                    <h4 class="font-bold text-lg mb-1">Spedizione Veloce</h4>
+                    <p class="text-green-100 text-sm">Consegna in tutta Italia in 3-5 giorni lavorativi</p>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-700 to-green-800 rounded-xl p-6 flex items-center gap-4">
+                <div class="text-4xl">✅</div>
+                <div>
+                    <h4 class="font-bold text-lg mb-1">Prodotti Ufficiali</h4>
+                    <p class="text-green-100 text-sm">Merchandising ufficiale certificato della squadra</p>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-800 to-green-900 rounded-xl p-6 flex items-center gap-4">
+                <div class="text-4xl">💳</div>
+                <div>
+                    <h4 class="font-bold text-lg mb-1">Pagamenti Sicuri</h4>
+                    <p class="text-green-100 text-sm">Carta di credito, PayPal e bonifico bancario</p>
+                </div>
+            </div>
+            
+            <div class="bg-gradient-to-r from-green-900 to-black rounded-xl p-6 flex items-center gap-4">
+                <div class="text-4xl">💚</div>
+                <div>
+                    <h4 class="font-bold text-lg mb-1">Sostieni la Squadra</h4>
+                    <p class="text-green-100 text-sm">Ogni acquisto supporta direttamente la Cestistica</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Call to Action finale -->
+        <div class="bg-gray-800 rounded-2xl p-8 md:p-12 text-center">
+            <h3 class="text-2xl md:text-3xl font-bold mb-4">Pronto a fare shopping? 🛍️</h3>
+            <p class="text-gray-400 mb-8">Visita il nostro store ufficiale e scopri tutti i prodotti disponibili</p>
+            <a href="https://cestisticasavonese.sumupstore.com/" target="_blank" rel="noopener noreferrer" class="inline-block gradient-bg text-white px-10 py-4 rounded-xl font-bold text-lg hover:opacity-90 transition">
+                Vai allo Store Ufficiale →
+            </a>
+        </div>
+        
+        <!-- Note legali -->
+        <div class="text-center mt-8">
+            <p class="text-gray-500 text-sm">
+                Lo store è gestito da SumUp Store. Verrai reindirizzato a una pagina esterna sicura.
+            </p>
+        </div>
     </div>
 </div>
 

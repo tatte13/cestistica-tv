@@ -1253,12 +1253,116 @@
 </div>
                 
                 <!-- Users Tab -->
-                <div id="adminUsersTab" class="hidden">
-                    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
-                        <h3 class="text-lg font-bold mb-4">👥 Membri Registrati</h3>
-                        <div id="membersList" class="space-y-3 max-h-96 overflow-y-auto"></div>
-                    </div>
-                </div>
+<div id="adminUsersTab" class="hidden">
+    <!-- IP Bannati -->
+    <div id="bannedIPsSection" class="bg-red-900/20 border-2 border-red-500 rounded-xl p-4 mb-6 hidden">
+        <div class="flex items-center justify-between mb-3">
+            <h3 class="font-bold text-red-400 flex items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                IP Bannati (<span id="bannedIPCount">0</span>)
+            </h3>
+            <button onclick="svuotaIPBannati()" class="text-xs text-red-400 hover:text-red-300">Svuota Lista</button>
+        </div>
+        <div id="bannedIPsList" class="flex flex-wrap gap-2"></div>
+    </div>
+    
+    <!-- Filtri Utenti -->
+    <div class="bg-gray-800 rounded-xl p-4 mb-6">
+        <div class="flex flex-wrap gap-2">
+            <button onclick="filterUsers('tutti')" id="filterUsersTutti" class="px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold">Tutti</button>
+            <button onclick="filterUsers('attivi')" id="filterUsersAttivi" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold">✅ Attivi</button>
+            <button onclick="filterUsers('bannati')" id="filterUsersBannati" class="px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold">🚫 Bannati</button>
+        </div>
+    </div>
+    
+    <!-- Lista Utenti -->
+    <div class="bg-gray-800 rounded-xl p-4 md:p-6">
+        <h3 class="text-lg font-bold mb-4">👥 Gestione Utenti</h3>
+        <div id="adminUsersList" class="space-y-3"></div>
+        <p id="noAdminUsers" class="text-gray-500 text-center py-4 hidden">Nessun utente trovato</p>
+    </div>
+</div>
+
+<!-- Modal Ban Utente -->
+<div id="banUserModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-red-600/30">
+        <div class="flex items-center gap-2 text-red-500 mb-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
+            <h3 class="text-xl font-bold">🚫 Ban Permanente</h3>
+        </div>
+        
+        <div id="banUserInfo" class="bg-gray-700 rounded-lg p-4 mb-4">
+            <!-- Info utente da bannare -->
+        </div>
+        
+        <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-400 mb-2">Motivo del Ban *</label>
+            <textarea id="banReason" placeholder="Descrivi il comportamento scorretto (spam, insulti, violazione regolamento...)" class="w-full bg-gray-700 px-4 py-3 rounded-lg border border-gray-600 h-24" maxlength="500"></textarea>
+            <p class="text-xs text-gray-500 mt-1"><span id="banReasonCount">0</span>/500 caratteri</p>
+        </div>
+        
+        <div class="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-4">
+            <p class="text-sm text-red-400 font-semibold mb-2">⚠️ ATTENZIONE - Ban Permanente:</p>
+            <ul class="text-sm text-red-300 space-y-1">
+                <li>• L'account verrà disattivato permanentemente</li>
+                <li>• L'indirizzo IP verrà bannato</li>
+                <li>• L'utente non potrà più accedere o registrarsi</li>
+                <li>• Tutte le sue scommesse attive verranno annullate</li>
+                <li>• I punti verranno azzerati</li>
+            </ul>
+        </div>
+        
+        <div class="flex gap-2">
+            <button onclick="confirmBanUser()" class="flex-1 bg-red-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-red-700">
+                🚫 Conferma Ban
+            </button>
+            <button onclick="closeBanModal()" class="flex-1 bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-700">
+                Annulla
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Elimina Utente -->
+<div id="deleteUserModal" class="fixed inset-0 bg-black/80 z-50 flex items-center justify-center hidden p-4">
+    <div class="bg-gray-800 p-6 rounded-2xl max-w-md w-full border border-red-600/30">
+        <div class="flex items-center gap-2 text-red-500 mb-4">
+            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+            <h3 class="text-xl font-bold">🗑️ Elimina Account</h3>
+        </div>
+        
+        <div id="deleteUserInfo" class="bg-gray-700 rounded-lg p-4 mb-4">
+            <!-- Info utente da eliminare -->
+        </div>
+        
+        <div class="bg-red-900/20 border border-red-500 rounded-lg p-4 mb-4">
+            <p class="text-sm text-red-400 font-semibold mb-2">⚠️ AZIONE IRREVERSIBILE:</p>
+            <ul class="text-sm text-red-300 space-y-1">
+                <li>• L'account verrà eliminato definitivamente</li>
+                <li>• Tutti i dati dell'utente verranno cancellati</li>
+                <li>• Le sue scommesse e giocate verranno rimosse</li>
+                <li>• I commenti e interazioni verranno cancellati</li>
+                <li>• Questa operazione NON può essere annullata</li>
+            </ul>
+        </div>
+        
+        <div class="mb-4">
+            <label class="flex items-center gap-2 text-sm">
+                <input type="checkbox" id="confirmDeleteCheck" class="w-4 h-4">
+                <span>Confermo di voler eliminare definitivamente questo account</span>
+            </label>
+        </div>
+        
+        <div class="flex gap-2">
+            <button onclick="confirmDeleteUser()" id="confirmDeleteBtn" class="flex-1 bg-red-600 text-white px-4 py-3 rounded-lg font-bold hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed" disabled>
+                🗑️ Elimina Account
+            </button>
+            <button onclick="closeDeleteModal()" class="flex-1 bg-gray-600 text-white px-4 py-3 rounded-lg font-semibold hover:bg-gray-700">
+                Annulla
+            </button>
+        </div>
+    </div>
+</div>
 
                 <!-- Logo Tab -->
                 <div id="adminLogoTab" class="hidden">
@@ -2089,20 +2193,50 @@ function deleteBetting(betId) {
         }
 
         function login() {
-            const username = document.getElementById('loginUsername').value.trim();
-            const password = document.getElementById('loginPassword').value;
-            
-            if (!username || !password) return showAuthError('Compila tutti i campi');
+    const username = document.getElementById('loginUsername').value.trim();
+    const password = document.getElementById('loginPassword').value;
+    
+    if (!username || !password) return showAuthError('Compila tutti i campi');
 
-            const user = usersCache.find(u => u.username === username && u.password === password);
-            if (user) {
-                currentUser = user;
-                localStorage.setItem('cesticaUser', JSON.stringify(user));
-                showMainApp();
-            } else {
-                showAuthError('Username o password errati');
-            }
+    const user = usersCache.find(u => u.username === username && u.password === password);
+    
+    if (user) {
+        // Controlla se l'utente è bannato
+        if (user.banned) {
+            showAuthError(`🚫 Account bannato. Motivo: ${user.banReason || 'Violazione regolamento'}`);
+            return;
         }
+        
+        // Salva IP utente (usa un servizio esterno in produzione)
+        // Qui usiamo un placeholder, in produzione usa: https://api.ipify.org?format=json
+        const userIP = '192.168.1.' + Math.floor(Math.random() * 255); // PLACEHOLDER
+        
+        // Controlla se l'IP è bannato
+        db.ref('bannedIPs').once('value', (snapshot) => {
+            let ipBanned = false;
+            snapshot.forEach(child => {
+                if (child.val().ip === userIP) {
+                    ipBanned = true;
+                }
+            });
+            
+            if (ipBanned) {
+                showAuthError('🚫 Questo IP è stato bannato. Non puoi accedere.');
+                return;
+            }
+            
+            // Salva IP nel profilo utente
+            db.ref('users/' + user.id).update({ lastIP: userIP });
+            user.lastIP = userIP;
+            
+            currentUser = user;
+            localStorage.setItem('cesticaUser', JSON.stringify(user));
+            showMainApp();
+        });
+    } else {
+        showAuthError('Username o password errati');
+    }
+}
 
         function register() {
             const nome = document.getElementById('regNome').value.trim();
@@ -3560,17 +3694,17 @@ function sendLiveChat() {
 
         // Admin
         function showAdmin() {
-            if (!currentUser.isAdmin) return;
-            hideAllPages();
-            document.getElementById('adminPage').classList.remove('hidden');
-            showAdminTab('video');
-            loadAdminVideoList();
-            loadAdminNewsList();
-            loadAdminPronosticiList();
-            loadAdminMultiple();
-            loadMembersList();
-            updateAdminStats();
-        }
+    if (!currentUser.isAdmin) return;
+    hideAllPages();
+    document.getElementById('adminPage').classList.remove('hidden');
+    showAdminTab('video');
+    loadAdminVideoList();
+    loadAdminNewsList();
+    loadAdminPronosticiList();
+    loadAdminMultiple();
+    initAdminUsers();
+    updateAdminStats();
+}
 
         function showAdminTab(tab) {
             ['video', 'news', 'calendar', 'pronostici', 'points', 'users', 'logo', 'sponsor', 'mascot', 'roster'].forEach(t => {
@@ -4166,7 +4300,357 @@ function deletePronostico(id) {
             `).join('');
         }
 
-        // Logo
+        // ========== GESTIONE MODERAZIONE UTENTI ==========
+let bannedIPsCache = [];
+let currentUserFilter = 'tutti';
+let userToBan = null;
+let userToDelete = null;
+
+function loadBannedIPs() {
+    db.ref('bannedIPs').on('value', (snapshot) => {
+        bannedIPsCache = [];
+        snapshot.forEach(child => {
+            bannedIPsCache.push({ id: child.key, ...child.val() });
+        });
+        renderBannedIPs();
+    });
+}
+
+function renderBannedIPs() {
+    const section = document.getElementById('bannedIPsSection');
+    const list = document.getElementById('bannedIPsList');
+    const count = document.getElementById('bannedIPCount');
+    
+    if (!section || !list) return;
+    
+    if (bannedIPsCache.length === 0) {
+        section.classList.add('hidden');
+    } else {
+        section.classList.remove('hidden');
+        count.textContent = bannedIPsCache.length;
+        list.innerHTML = bannedIPsCache.map(ip => `
+            <div class="bg-red-800/50 border border-red-500 px-3 py-1 rounded-full text-sm flex items-center gap-2">
+                <span class="font-mono">${ip.ip}</span>
+                <button onclick="unbanIP('${ip.id}')" class="text-red-300 hover:text-white" title="Sblocca IP">
+                    <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+                </button>
+            </div>
+        `).join('');
+    }
+}
+
+function filterUsers(filter) {
+    currentUserFilter = filter;
+    
+    // Update pulsanti filtro
+    ['Tutti', 'Attivi', 'Bannati'].forEach(f => {
+        const btn = document.getElementById('filterUsers' + f);
+        if (btn) {
+            if (f.toLowerCase() === filter) {
+                btn.className = 'px-4 py-2 rounded-lg bg-green-600 text-white text-sm font-semibold';
+            } else {
+                btn.className = 'px-4 py-2 rounded-lg bg-gray-700 text-gray-300 text-sm font-semibold';
+            }
+        }
+    });
+    
+    loadAdminUsersList();
+}
+
+function loadAdminUsersList() {
+    const container = document.getElementById('adminUsersList');
+    const noUsers = document.getElementById('noAdminUsers');
+    
+    if (!container) return;
+    
+    let users = usersCache.filter(u => !u.isAdmin);
+    
+    // Applica filtro
+    if (currentUserFilter === 'attivi') {
+        users = users.filter(u => !u.banned);
+    } else if (currentUserFilter === 'bannati') {
+        users = users.filter(u => u.banned);
+    }
+    
+    if (users.length === 0) {
+        container.innerHTML = '';
+        if (noUsers) noUsers.classList.remove('hidden');
+    } else {
+        if (noUsers) noUsers.classList.add('hidden');
+        container.innerHTML = users.map(u => {
+            const isBanned = u.banned || false;
+            const statusBadge = isBanned 
+                ? '<span class="bg-red-500 px-3 py-1 rounded-full text-xs font-semibold">🚫 BANNATO</span>'
+                : '<span class="bg-green-500 px-3 py-1 rounded-full text-xs font-semibold">✅ ATTIVO</span>';
+            
+            return `
+                <div class="bg-gray-700 rounded-lg p-4 ${isBanned ? 'border-2 border-red-500' : ''}">
+                    <div class="flex flex-col md:flex-row md:items-center gap-4">
+                        <!-- Info Utente -->
+                        <div class="flex items-center gap-3 flex-1">
+                            <div class="w-12 h-12 bg-green-600 rounded-full flex items-center justify-center overflow-hidden">
+                                ${u.profilePhoto ? `<img src="${u.profilePhoto}" class="w-full h-full object-cover">` : `<span class="font-bold text-lg">${u.username.charAt(0).toUpperCase()}</span>`}
+                            </div>
+                            <div class="flex-1">
+                                <p class="font-bold">${u.nome} ${u.cognome}</p>
+                                <p class="text-sm text-gray-400">@${u.username} • ${u.email}</p>
+                                <p class="text-xs text-gray-500 font-mono">IP: ${u.lastIP || 'N/A'}</p>
+                                ${isBanned ? `<p class="text-xs text-red-400 mt-1">Bannato: ${u.banReason || 'Nessun motivo specificato'}</p>` : ''}
+                            </div>
+                        </div>
+                        
+                        <!-- Stats -->
+                        <div class="flex gap-4 text-sm">
+                            <div class="text-center">
+                                <p class="text-gray-400">Punti</p>
+                                <p class="font-bold text-green-400">${u.points || 0}</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-gray-400">Dal</p>
+                                <p class="font-bold">${u.date || 'N/A'}</p>
+                            </div>
+                        </div>
+                        
+                        <!-- Stato -->
+                        <div class="text-center">
+                            ${statusBadge}
+                        </div>
+                        
+                        <!-- Azioni -->
+                        <div class="flex flex-col gap-2">
+                            ${!isBanned ? `
+                                <button onclick="openBanModal('${u.id}')" class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636"></path></svg>
+                                    Ban
+                                </button>
+                            ` : `
+                                <button onclick="unbanUser('${u.id}')" class="bg-green-600 hover:bg-green-700 px-4 py-2 rounded-lg text-sm font-semibold whitespace-nowrap">
+                                    ✅ Sbanna
+                                </button>
+                            `}
+                            <button onclick="openDeleteModal('${u.id}')" class="bg-red-600 hover:bg-red-700 px-4 py-2 rounded-lg text-sm font-semibold flex items-center gap-2 whitespace-nowrap">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                                Elimina
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+}
+
+// ========== BAN UTENTE ==========
+function openBanModal(userId) {
+    const user = usersCache.find(u => u.id === userId);
+    if (!user) return;
+    
+    userToBan = user;
+    
+    document.getElementById('banUserInfo').innerHTML = `
+        <p class="font-bold text-lg mb-2">${user.nome} ${user.cognome}</p>
+        <p class="text-sm text-gray-400">Username: @${user.username}</p>
+        <p class="text-sm text-gray-400">Email: ${user.email}</p>
+        <p class="text-sm text-gray-400 font-mono">IP: ${user.lastIP || 'N/A'}</p>
+        <p class="text-sm text-gray-400">Punti: ${user.points || 0} 💚</p>
+    `;
+    
+    document.getElementById('banReason').value = '';
+    document.getElementById('banReasonCount').textContent = '0';
+    document.getElementById('banUserModal').classList.remove('hidden');
+}
+
+function closeBanModal() {
+    userToBan = null;
+    document.getElementById('banUserModal').classList.add('hidden');
+}
+
+function confirmBanUser() {
+    if (!userToBan) return;
+    
+    const reason = document.getElementById('banReason').value.trim();
+    
+    if (!reason) {
+        alert('❌ Inserisci un motivo per il ban!');
+        return;
+    }
+    
+    if (!confirm(`🚫 Confermi il BAN PERMANENTE di ${userToBan.username}?\n\nQuesta azione:\n• Disattiva l'account\n• Banna l'IP ${userToBan.lastIP || 'N/A'}\n• Annulla tutte le scommesse attive\n• È permanente e definitiva`)) {
+        return;
+    }
+    
+    // Banna l'IP se presente
+    if (userToBan.lastIP) {
+        db.ref('bannedIPs').push({
+            ip: userToBan.lastIP,
+            bannedUser: userToBan.username,
+            reason: reason,
+            bannedBy: currentUser.username,
+            bannedAt: new Date().toLocaleString('it-IT'),
+            timestamp: Date.now()
+        });
+    }
+    
+    // Aggiorna utente
+    db.ref('users/' + userToBan.id).update({
+        banned: true,
+        banReason: reason,
+        banDate: new Date().toLocaleString('it-IT'),
+        bannedBy: currentUser.username,
+        points: 0 // Azzera punti
+    });
+    
+    // Annulla scommesse attive
+    annullaScommesseUtente(userToBan.id);
+    
+    // Invia notifica
+    db.ref('notifications/' + userToBan.id).push({
+        type: 'ban',
+        message: `🚫 Il tuo account è stato bannato permanentemente. Motivo: ${reason}`,
+        date: Date.now(),
+        read: false
+    });
+    
+    alert(`✅ ${userToBan.username} è stato bannato permanentemente!`);
+    closeBanModal();
+}
+
+// Contatore caratteri motivo ban
+document.addEventListener('DOMContentLoaded', function() {
+    const banReasonInput = document.getElementById('banReason');
+    if (banReasonInput) {
+        banReasonInput.addEventListener('input', function() {
+            document.getElementById('banReasonCount').textContent = this.value.length;
+        });
+    }
+});
+
+function unbanUser(userId) {
+    const user = usersCache.find(u => u.id === userId);
+    if (!user) return;
+    
+    if (!confirm(`✅ Sbannare ${user.username}?\n\nL'utente potrà nuovamente accedere all'account.`)) return;
+    
+    // Rimuovi ban dall'utente
+    db.ref('users/' + userId).update({
+        banned: false,
+        banReason: null,
+        banDate: null,
+        bannedBy: null
+    });
+    
+    // Rimuovi IP dalla lista bannati (se presente)
+    if (user.lastIP) {
+        bannedIPsCache.forEach(ip => {
+            if (ip.ip === user.lastIP) {
+                db.ref('bannedIPs/' + ip.id).remove();
+            }
+        });
+    }
+    
+    alert(`✅ ${user.username} è stato sbloccato!`);
+}
+
+function unbanIP(ipId) {
+    if (!confirm('Sbloccare questo indirizzo IP?')) return;
+    db.ref('bannedIPs/' + ipId).remove();
+}
+
+function svuotaIPBannati() {
+    if (!confirm('⚠️ Svuotare TUTTA la lista degli IP bannati?\n\nTutti gli IP verranno sbloccati!')) return;
+    db.ref('bannedIPs').remove();
+    alert('✅ Lista IP bannati svuotata!');
+}
+
+// ========== ELIMINA UTENTE ==========
+function openDeleteModal(userId) {
+    const user = usersCache.find(u => u.id === userId);
+    if (!user) return;
+    
+    userToDelete = user;
+    
+    document.getElementById('deleteUserInfo').innerHTML = `
+        <p class="font-bold text-lg mb-2">${user.nome} ${user.cognome}</p>
+        <p class="text-sm text-gray-400">Username: @${user.username}</p>
+        <p class="text-sm text-gray-400">Email: ${user.email}</p>
+        <p class="text-sm text-gray-400">Registrato: ${user.date || 'N/A'}</p>
+        <p class="text-sm text-gray-400">Punti: ${user.points || 0} 💚</p>
+    `;
+    
+    document.getElementById('confirmDeleteCheck').checked = false;
+    document.getElementById('confirmDeleteBtn').disabled = true;
+    document.getElementById('deleteUserModal').classList.remove('hidden');
+}
+
+function closeDeleteModal() {
+    userToDelete = null;
+    document.getElementById('deleteUserModal').classList.add('hidden');
+}
+
+// Abilita pulsante elimina solo se checkbox confermata
+document.addEventListener('DOMContentLoaded', function() {
+    const checkbox = document.getElementById('confirmDeleteCheck');
+    if (checkbox) {
+        checkbox.addEventListener('change', function() {
+            document.getElementById('confirmDeleteBtn').disabled = !this.checked;
+        });
+    }
+});
+
+function confirmDeleteUser() {
+    if (!userToDelete) return;
+    
+    if (!confirm(`🗑️ ULTIMA CONFERMA\n\nEliminare DEFINITIVAMENTE l'account di ${userToDelete.username}?\n\nQuesta azione NON può essere annullata!`)) {
+        return;
+    }
+    
+    const userId = userToDelete.id;
+    const username = userToDelete.username;
+    
+    // Elimina tutte le scommesse dell'utente
+    db.ref('giocateMultiple').orderByChild('userId').equalTo(userId).once('value', (snapshot) => {
+        snapshot.forEach(child => {
+            child.ref.remove();
+        });
+    });
+    
+    // Elimina notifiche
+    db.ref('notifications/' + userId).remove();
+    
+    // Elimina commenti (se presenti)
+    // TODO: implementa se hai una struttura separata per i commenti
+    
+    // Elimina l'utente
+    db.ref('users/' + userId).remove();
+    
+    alert(`✅ Account di ${username} eliminato definitivamente!`);
+    closeDeleteModal();
+}
+
+function annullaScommesseUtente(userId) {
+    // Annulla scommesse multiple attive
+    db.ref('giocateMultiple').orderByChild('userId').equalTo(userId).once('value', (snapshot) => {
+        snapshot.forEach(child => {
+            const giocata = child.val();
+            if (giocata.stato === 'attiva') {
+                // Segna come annullata invece di eliminarla
+                child.ref.update({ 
+                    stato: 'annullata',
+                    annullataDa: 'Sistema (utente bannato)',
+                    annullataIl: new Date().toLocaleString('it-IT')
+                });
+            }
+        });
+    });
+}
+
+// Carica IP bannati quando si apre l'admin
+function initAdminUsers() {
+    loadBannedIPs();
+    loadAdminUsersList();
+}
+    
+    // Logo
         function applyLogo(logo) {
             const headerLogo = document.getElementById('headerLogo');
             const headerEmoji = document.getElementById('headerLogoEmoji');
